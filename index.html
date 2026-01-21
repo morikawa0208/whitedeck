@@ -242,7 +242,7 @@
 
         const game = {
             round: 1, score: 0, goal: 50, credits: 500, energy: 10, maxEnergy: 10, baseDamage: 10,
-            inventory: [], deck: [], currentRunDeck: [], hand: [], selectedHandIndices: [],
+            inventory: [], deck: [], currentRunDeck: [], currentRunDiscard: [], hand: [], selectedHandIndices: [],
             currentRunMult: 1.0, isRoundCleared: false,
 
             init() {
@@ -389,6 +389,7 @@
                 this.round = 1; this.score = 0; this.goal = 50; this.energy = 10;
                 this.isRoundCleared = false; this.currentRunMult = 1.0;
                 this.currentRunDeck = [...this.deck].sort(() => Math.random() - 0.5);
+                this.currentRunDiscard = [];
                 this.hand = []; this.selectedHandIndices = [];
                 document.getElementById('base-menu').classList.add('hidden');
                 document.getElementById('game-ui').classList.remove('hidden');
@@ -398,6 +399,10 @@
 
             drawCards(count) {
                 for (let i = 0; i < count; i++) {
+                    if (this.currentRunDeck.length === 0 && this.currentRunDiscard.length > 0) {
+                        this.currentRunDeck = [...this.currentRunDiscard].sort(() => Math.random() - 0.5);
+                        this.currentRunDiscard = [];
+                    }
                     if (this.currentRunDeck.length > 0 && this.hand.length < 5) {
                         this.hand.push(this.currentRunDeck.shift());
                     }
@@ -453,6 +458,7 @@
                 });
 
                 sortedIndices.forEach(idx => this.hand.splice(idx, 1));
+                this.currentRunDiscard.push(...playedCards);
                 this.selectedHandIndices = [];
 
                 const finalDmg = (this.baseDamage + addedDmg) * this.currentRunMult;
@@ -473,6 +479,7 @@
                 this.round++; this.score = 0; this.energy = this.maxEnergy;
                 this.currentRunMult = 1.0; this.isRoundCleared = false;
                 this.currentRunDeck = [...this.deck].sort(() => Math.random() - 0.5);
+                this.currentRunDiscard = [];
                 this.hand = []; this.selectedHandIndices = [];
                 this.goal = Math.floor(50 * Math.pow(2.8, this.round - 1));
                 this.drawCards(5); this.updateUI();

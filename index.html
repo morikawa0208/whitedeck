@@ -114,7 +114,7 @@
 
     <!-- Bottom Menu -->
     <nav class="border-t border-gray-100 bg-white px-2 py-2 flex justify-between items-center text-[10px] text-gray-500">
-        <button class="flex flex-col items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition">
+        <button id="ability-btn" class="flex flex-col items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition">
             <i class="fa-solid fa-person-running text-sm"></i>
             <span>能力</span>
         </button>
@@ -135,6 +135,52 @@
             <span>メニュー</span>
         </button>
     </nav>
+
+    <!-- Ability Menu -->
+    <div id="ability-panel" class="fixed inset-0 bg-white/95 z-40 hidden flex flex-col p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-800 tracking-wide">能力</h2>
+            <button id="ability-close" class="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="space-y-4 text-sm text-gray-700">
+            <div class="border border-gray-200 rounded-xl p-4">
+                <div class="text-xs font-semibold text-gray-400 mb-2">STR</div>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>攻撃力</li>
+                    <li>クリティカルダメージ率</li>
+                    <li>防御貫通</li>
+                </ul>
+            </div>
+            <div class="border border-gray-200 rounded-xl p-4">
+                <div class="text-xs font-semibold text-gray-400 mb-2">VIT</div>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>HP</li>
+                    <li>HP自動回復</li>
+                    <li>HP吸収率</li>
+                    <li>反射率</li>
+                </ul>
+            </div>
+            <div class="border border-gray-200 rounded-xl p-4">
+                <div class="text-xs font-semibold text-gray-400 mb-2">DEX</div>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>クリティカル率</li>
+                    <li>回避率</li>
+                    <li>追加ターン</li>
+                    <li>クールダウン短縮率</li>
+                </ul>
+            </div>
+            <div class="border border-gray-200 rounded-xl p-4">
+                <div class="text-xs font-semibold text-gray-400 mb-2">INT</div>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>MP</li>
+                    <li>MP自動回復</li>
+                    <li>スキル威力率</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 
     <!-- Reward / Shop / Level Up Overlays -->
     <div id="overlay" class="fixed inset-0 bg-white/95 z-50 hidden flex flex-col p-8 items-center justify-center text-center">
@@ -487,6 +533,12 @@
             document.getElementById('end-turn-btn').onclick = endTurn;
             document.getElementById('overlay-close').onclick = () => {
                 document.getElementById('overlay').classList.add('hidden');
+            };
+            document.getElementById('ability-btn').onclick = () => {
+                document.getElementById('ability-panel').classList.remove('hidden');
+            };
+            document.getElementById('ability-close').onclick = () => {
+                document.getElementById('ability-panel').classList.add('hidden');
             };
         };
     </script>

@@ -114,6 +114,10 @@
 
     <!-- Bottom Menu -->
     <nav class="border-t border-gray-100 bg-white px-2 py-2 flex justify-between items-center text-[10px] text-gray-500">
+        <button id="dungeon-btn" class="flex flex-col items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition">
+            <i class="fa-solid fa-dungeon text-sm"></i>
+            <span>ダンジョン</span>
+        </button>
         <button id="ability-btn" class="flex flex-col items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition">
             <i class="fa-solid fa-person-running text-sm"></i>
             <span>能力</span>
@@ -182,6 +186,17 @@
         </div>
     </div>
 
+    <!-- Dungeon Panel -->
+    <div id="dungeon-panel" class="fixed inset-0 bg-white/95 z-40 hidden flex flex-col p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-800 tracking-wide">ダンジョン</h2>
+            <button id="dungeon-close" class="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div id="dungeon-panel-content" class="space-y-4 text-sm text-gray-700"></div>
+    </div>
+
     <!-- Reward / Shop / Level Up Overlays -->
     <div id="overlay" class="fixed inset-0 bg-white/95 z-50 hidden flex flex-col p-8 items-center justify-center text-center">
         <h2 id="overlay-title" class="text-3xl font-800 mb-2 italic">VICTORY</h2>
@@ -209,7 +224,12 @@
             floor: 1,
             enemies: [],
             isPlayerTurn: true,
-            turnCount: 0
+            turnCount: 0,
+            dungeon: {
+                maps: [],
+                currentMapIndex: null,
+                currentNodeIndex: null
+            }
         };
 
         const ITEM_TYPES = {
@@ -234,6 +254,14 @@
                 { name: 'Skeleton', hp: 22, atk: 6, gold: 20, exp: 70 },
                 { name: 'Gargoyle', hp: 50, atk: 10, gold: 100, exp: 200 }
             ]
+        };
+
+        const MAP_TYPES = {
+            NORMAL: 'normal',
+            SHOP: 'shop',
+            NAMED: 'named',
+            BOSS: 'boss',
+            TREASURE: 'treasure'
         };
 
         // --- Core UI Logic ---
@@ -282,19 +310,21 @@
             document.getElementById('player-mp-bar').style.width = `${(state.player.mp / state.player.maxMp) * 100}%`;
             document.getElementById('gold-text').textContent = `${state.player.gold}G`;
             document.getElementById('level-text').textContent = `Lv.${state.player.lv} (${state.player.exp}/${state.player.expNext})`;
-            document.getElementById('floor-text').textContent = `Floor ${state.floor}`;
+            document.getElementById('floor-text').textContent = getFloorText();
         }
 
         // --- Battle Logic ---
-        function spawnEnemies() {
-            const count = Math.min(3, Math.ceil(state.floor / 3));
+        function spawnEnemies(nodeType = MAP_TYPES.NORMAL) {
+            const baseFloor = state.floor + (nodeType === MAP_TYPES.NAMED ? 2 : nodeType === MAP_TYPES.BOSS ? 5 : 0);
+            const count = nodeType === MAP_TYPES.BOSS ? 1 : Math.min(3, Math.ceil(baseFloor / 3));
             state.enemies = [];
             const container = document.getElementById('enemy-container');
             container.innerHTML = '';
 
             for (let i = 0; i < count; i++) {
-                const monsterBase = DATABASE.monsters[Math.min(DATABASE.monsters.length - 1, Math.floor(state.floor / 4))];
-                const monster = { ...monsterBase, hp: monsterBase.hp + (state.floor * 2), maxHp: monsterBase.hp + (state.floor * 2), id: i };
+                const monsterBase = DATABASE.monsters[Math.min(DATABASE.monsters.length - 1, Math.floor(baseFloor / 4))];
+                const bonusHp = baseFloor * (nodeType === MAP_TYPES.BOSS ? 3 : nodeType === MAP_TYPES.NAMED ? 2 : 1);
+                const monster = { ...monsterBase, hp: monsterBase.hp + bonusHp, maxHp: monsterBase.hp + bonusHp, id: i };
                 state.enemies.push(monster);
 
                 const el = document.createElement('div');
@@ -377,8 +407,10 @@
         function checkBattleEnd() {
             if (state.enemies.length === 0) {
                 setTimeout(() => {
-                    showOverlay('VICTORY', `You reached floor ${state.floor}`, [
-                        { label: 'Next Floor', action: nextFloor }
+                    const nodeType = getCurrentNode()?.type;
+                    const nextLabel = nodeType === MAP_TYPES.BOSS ? getNextMapLabel() : '次のマスへ';
+                    showOverlay('VICTORY', getNodeResultText(nodeType), [
+                        { label: nextLabel, action: () => completeNode(nodeType) }
                     ]);
                 }, 800);
             }
@@ -469,22 +501,18 @@
 
         function nextFloor() {
             state.floor++;
-            if (state.floor % 3 === 0) {
-                showShop();
-            } else {
-                spawnEnemies();
-                updateStats();
-            }
+            spawnEnemies();
+            updateStats();
         }
 
-        function showShop() {
+        function showShop(onClose) {
             const pool = DATABASE.items;
             const items = [pool[Math.floor(Math.random()*pool.length)], pool[Math.floor(Math.random()*pool.length)]];
             
             showOverlay('MERCHANT', 'Wares for sale...', [
                 { label: `${items[0].name} (${items[0].price}G)`, action: () => buyItem(items[0]) },
                 { label: `${items[1].name} (${items[1].price}G)`, action: () => buyItem(items[1]) },
-                { label: 'Leave', action: () => { spawnEnemies(); updateStats(); } }
+                { label: 'Leave', action: () => { if (onClose) onClose(); } }
             ]);
         }
 
@@ -519,15 +547,241 @@
             document.getElementById('overlay').classList.remove('hidden');
         }
 
+        // --- Dungeon / Map Logic ---
+        function createMaps() {
+            return [
+                { name: 'Woods', nodes: buildNodes([MAP_TYPES.NORMAL, MAP_TYPES.NORMAL, MAP_TYPES.SHOP, MAP_TYPES.NORMAL, MAP_TYPES.BOSS]) },
+                { name: 'Ruins', nodes: buildNodes([MAP_TYPES.NORMAL, MAP_TYPES.TREASURE, MAP_TYPES.NAMED, MAP_TYPES.SHOP, MAP_TYPES.BOSS]) },
+                { name: 'Abyss', nodes: buildNodes([MAP_TYPES.NORMAL, MAP_TYPES.NAMED, MAP_TYPES.TREASURE, MAP_TYPES.BOSS]) }
+            ];
+        }
+
+        function buildNodes(types) {
+            return types.map((type, index) => ({
+                type,
+                unlocked: index === 0,
+                cleared: false
+            }));
+        }
+
+        function initDungeon() {
+            state.dungeon.maps = createMaps();
+            state.dungeon.currentMapIndex = null;
+            state.dungeon.currentNodeIndex = null;
+        }
+
+        function getCurrentMap() {
+            if (state.dungeon.currentMapIndex === null) return null;
+            return state.dungeon.maps[state.dungeon.currentMapIndex];
+        }
+
+        function getCurrentNode() {
+            const map = getCurrentMap();
+            if (!map || state.dungeon.currentNodeIndex === null) return null;
+            return map.nodes[state.dungeon.currentNodeIndex];
+        }
+
+        function getFloorText() {
+            const map = getCurrentMap();
+            if (!map) return 'Dungeon Select';
+            const nodeIndex = state.dungeon.currentNodeIndex !== null ? state.dungeon.currentNodeIndex + 1 : '-';
+            return `Map ${state.dungeon.currentMapIndex + 1}: ${map.name} (${nodeIndex}/${map.nodes.length})`;
+        }
+
+        function openDungeonPanel() {
+            renderDungeonPanel();
+            document.getElementById('dungeon-panel').classList.remove('hidden');
+        }
+
+        function renderDungeonPanel() {
+            const content = document.getElementById('dungeon-panel-content');
+            content.innerHTML = '';
+            const map = getCurrentMap();
+
+            if (!map) {
+                const title = document.createElement('div');
+                title.className = 'text-xs text-gray-500 uppercase tracking-widest';
+                title.textContent = 'ダンジョン選択';
+                content.appendChild(title);
+
+                state.dungeon.maps.forEach((mapData, index) => {
+                    const available = index === 0 || state.dungeon.maps[index - 1].cleared;
+                    const isCleared = !!mapData.cleared;
+                    const btn = document.createElement('button');
+                    btn.className = `w-full border rounded-xl p-4 flex items-center justify-between ${available ? 'bg-white border-gray-200 hover:bg-gray-50' : 'bg-gray-50 border-gray-100 text-gray-300'}`;
+                    btn.disabled = !available;
+                    btn.innerHTML = `
+                        <div class="text-left">
+                            <div class="font-semibold text-gray-800">${mapData.name}</div>
+                            <div class="text-[11px] text-gray-400">${isCleared ? 'CLEAR済み' : '攻略可能'}</div>
+                        </div>
+                        <div class="text-xs text-gray-400">${available ? 'SELECT' : 'LOCKED'}</div>
+                    `;
+                    btn.onclick = () => selectMap(index);
+                    content.appendChild(btn);
+                });
+                return;
+            }
+
+            const header = document.createElement('div');
+            header.className = 'text-xs text-gray-500 uppercase tracking-widest';
+            header.textContent = `${map.name} のマップ`;
+            content.appendChild(header);
+
+            const nodeWrap = document.createElement('div');
+            nodeWrap.className = 'grid grid-cols-2 gap-3';
+
+            map.nodes.forEach((node, index) => {
+                const isCurrent = index === state.dungeon.currentNodeIndex;
+                const btn = document.createElement('button');
+                const active = node.unlocked && !node.cleared;
+                btn.className = `border rounded-xl p-3 text-left space-y-1 ${active ? 'bg-white border-gray-200 hover:bg-gray-50' : 'bg-gray-50 border-gray-100 text-gray-300'} ${isCurrent ? 'ring-2 ring-black' : ''}`;
+                btn.disabled = !active;
+                btn.innerHTML = `
+                    <div class="flex items-center justify-between text-xs font-semibold">
+                        <span>${getNodeLabel(node.type)}</span>
+                        <span>${node.cleared ? 'CLEAR' : node.unlocked ? 'OPEN' : 'LOCK'}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400">マス ${index + 1}</div>
+                `;
+                btn.onclick = () => startNode(index);
+                nodeWrap.appendChild(btn);
+            });
+
+            content.appendChild(nodeWrap);
+
+            const legend = document.createElement('div');
+            legend.className = 'text-[10px] text-gray-400 space-y-1';
+            legend.innerHTML = `
+                <div>通常: 敵戦 / 店: ショップ / ネームド: 強敵</div>
+                <div>宝箱: 報酬 / ボス: マップ進行</div>
+            `;
+            content.appendChild(legend);
+        }
+
+        function getNodeLabel(type) {
+            if (type === MAP_TYPES.SHOP) return '店';
+            if (type === MAP_TYPES.NAMED) return 'ネームド';
+            if (type === MAP_TYPES.BOSS) return 'ボス';
+            if (type === MAP_TYPES.TREASURE) return '宝箱';
+            return '通常';
+        }
+
+        function selectMap(index) {
+            state.dungeon.currentMapIndex = index;
+            state.dungeon.currentNodeIndex = null;
+            const map = getCurrentMap();
+            map.nodes.forEach((node, nodeIndex) => {
+                node.unlocked = nodeIndex === 0;
+                node.cleared = false;
+            });
+            updateStats();
+            renderDungeonPanel();
+        }
+
+        function startNode(index) {
+            const map = getCurrentMap();
+            const node = map?.nodes[index];
+            if (!node || !node.unlocked || node.cleared) return;
+            state.dungeon.currentNodeIndex = index;
+            state.floor = (state.dungeon.currentMapIndex * 5) + index + 1;
+            document.getElementById('dungeon-panel').classList.add('hidden');
+            document.getElementById('enemy-container').innerHTML = '';
+            state.enemies = [];
+            updateStats();
+
+            if (node.type === MAP_TYPES.SHOP) {
+                showShop(() => completeNode(node.type));
+                return;
+            }
+            if (node.type === MAP_TYPES.TREASURE) {
+                showTreasure();
+                return;
+            }
+            spawnEnemies(node.type);
+        }
+
+        function showTreasure() {
+            const rewardItem = Math.random() > 0.5 ? DATABASE.items[Math.floor(Math.random() * DATABASE.items.length)] : null;
+            const goldReward = rewardItem ? 0 : 15 + Math.floor(Math.random() * 15);
+            if (rewardItem) {
+                showOverlay('TREASURE', `You found ${rewardItem.name}!`, [
+                    { label: '受け取る', action: () => { addItemToBackpack(rewardItem); completeNode(MAP_TYPES.TREASURE); } }
+                ]);
+            } else {
+                showOverlay('TREASURE', `You found ${goldReward}G!`, [
+                    { label: '受け取る', action: () => { state.player.gold += goldReward; updateStats(); completeNode(MAP_TYPES.TREASURE); } }
+                ]);
+            }
+        }
+
+        function completeNode(nodeType) {
+            const map = getCurrentMap();
+            const node = getCurrentNode();
+            if (!map || !node) return;
+            node.cleared = true;
+            const nextNode = map.nodes[state.dungeon.currentNodeIndex + 1];
+            if (nextNode) {
+                nextNode.unlocked = true;
+            }
+            if (nodeType === MAP_TYPES.BOSS) {
+                handleBossClear();
+                return;
+            }
+            state.dungeon.currentNodeIndex = null;
+            renderDungeonPanel();
+            updateStats();
+            openDungeonPanel();
+        }
+
+        function handleBossClear() {
+            const map = getCurrentMap();
+            map.cleared = true;
+            const isLastMap = state.dungeon.currentMapIndex === state.dungeon.maps.length - 1;
+            if (isLastMap) {
+                showOverlay('DUNGEON CLEAR', '最後のボスを撃破！', [
+                    { label: '再挑戦', action: () => window.location.reload() }
+                ]);
+                return;
+            }
+            showOverlay('MAP CLEAR', '次のマップへ進もう', [
+                { label: '次のマップ', action: advanceMap }
+            ]);
+        }
+
+        function advanceMap() {
+            state.dungeon.currentMapIndex += 1;
+            state.dungeon.currentNodeIndex = null;
+            const map = getCurrentMap();
+            map.nodes.forEach((node, index) => {
+                node.unlocked = index === 0;
+                node.cleared = false;
+            });
+            updateStats();
+            openDungeonPanel();
+        }
+
+        function getNodeResultText(nodeType) {
+            if (nodeType === MAP_TYPES.BOSS) return 'ボス撃破！';
+            if (nodeType === MAP_TYPES.NAMED) return '強敵を倒した！';
+            return '戦闘勝利！';
+        }
+
+        function getNextMapLabel() {
+            const isLastMap = state.dungeon.currentMapIndex === state.dungeon.maps.length - 1;
+            return isLastMap ? 'ダンジョンクリアへ' : '次のマップへ';
+        }
+
         // --- Initialization ---
         window.onload = () => {
             initGrid();
+            initDungeon();
             // Start items
             addItemToBackpack(DATABASE.items[0]);
             addItemToBackpack(DATABASE.items[4]);
             
-            spawnEnemies();
             updateStats();
+            log('ダンジョンを選択してください。');
 
             document.getElementById('attack-btn').onclick = handleAttack;
             document.getElementById('end-turn-btn').onclick = endTurn;
@@ -539,6 +793,12 @@
             };
             document.getElementById('ability-close').onclick = () => {
                 document.getElementById('ability-panel').classList.add('hidden');
+            };
+            document.getElementById('dungeon-btn').onclick = () => {
+                openDungeonPanel();
+            };
+            document.getElementById('dungeon-close').onclick = () => {
+                document.getElementById('dungeon-panel').classList.add('hidden');
             };
         };
     </script>

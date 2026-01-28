@@ -3,221 +3,467 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mindful Flow</title>
+    <title>Backpack Dungeon</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&display=swap');
-
-        :root {
-            --bg-color: #ffffff;
-            --main-text: #1a1a1a;
-            --accent-soft: #f8f8f8;
-        }
-
         body {
-            font-family: 'Noto Sans JP', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--main-text);
-            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
             touch-action: manipulation;
+            overflow: hidden;
         }
-
-        .fade-in {
-            animation: fadeIn 2.5s ease-out forwards;
+        .grid-cell {
+            aspect-ratio: 1 / 1;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 呼吸ガイドのアニメーション */
-        @keyframes breathing {
-            0%, 100% { transform: scale(1); opacity: 0.1; }
-            50% { transform: scale(1.6); opacity: 0.25; }
-        }
-
-        .anim-breathing {
-            animation: breathing 8s ease-in-out infinite;
-        }
-
-        /* 中央のタイマー円：内側から満たされる */
-        #inner-fill {
-            transition: transform 1s linear;
-            transform: scale(0);
-            transform-origin: center;
-        }
-
-        /* スライダーのカスタマイズ（少し操作しやすく） */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: transparent;
-            height: 40px;
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 2px;
-            background: #eee;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 20px;
-            width: 20px;
-            border-radius: 50%;
-            background: #1a1a1a;
-            margin-top: -9px;
+        .item-node {
             cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.1s ease;
+        }
+        .item-node:active {
+            transform: scale(0.95);
+        }
+        .health-bar {
+            height: 4px;
+            transition: width 0.3s ease-out;
+        }
+        .log-container {
+            mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        }
+        /* アニメーション */
+        @keyframes damage {
+            0% { transform: translateX(0); color: #ef4444; }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+        .animate-damage {
+            animation: damage 0.3s ease-in-out;
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-between min-h-screen p-10 pb-20">
+<body class="flex flex-col h-screen max-w-md mx-auto border-x border-gray-100 shadow-xl">
 
-    <!-- ヘッダー -->
-    <header class="w-full text-center space-y-4 mt-4 fade-in">
-        <h1 class="text-2xl font-light tracking-[0.4em] uppercase">Mindful Flow</h1>
-        <p id="status-text" class="text-sm text-gray-400 font-light tracking-widest transition-opacity duration-1000">心を静める準備</p>
+    <!-- Header / Stats -->
+    <header class="p-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+        <div>
+            <h1 class="text-xl font-800 tracking-tighter">BACKPACK DUNGEON</h1>
+            <p id="floor-text" class="text-xs text-gray-500 uppercase tracking-widest">Floor 1 - Woods</p>
+        </div>
+        <div class="text-right">
+            <div id="gold-text" class="text-sm font-semibold text-yellow-600">0G</div>
+            <div id="level-text" class="text-xs text-gray-400">Lv.1 (0/100)</div>
+        </div>
     </header>
 
-    <!-- メイン：ビジュアルタイマー -->
-    <div class="relative flex items-center justify-center w-full aspect-square max-w-sm">
-        <!-- 呼吸ガイド（背景で動く円） -->
-        <div id="breath-node" class="absolute w-48 h-48 bg-black rounded-full blur-3xl opacity-0 transition-opacity duration-1000"></div>
-        
-        <!-- 外側の枠線 -->
-        <div class="absolute w-64 h-64 md:w-80 md:h-80 border border-gray-100 rounded-full"></div>
+    <!-- Battle Screen -->
+    <main id="battle-area" class="flex-1 overflow-hidden flex flex-col p-4 space-y-4">
+        <!-- Enemy Section -->
+        <div id="enemy-container" class="flex justify-around items-end min-h-[120px]">
+            <!-- Enemies injected here -->
+        </div>
 
-        <!-- 中央の満ちていく円 -->
-        <div id="inner-fill" class="absolute w-64 h-64 md:w-80 md:h-80 bg-black rounded-full opacity-[0.03]"></div>
-        
-        <!-- センタードット -->
-        <div class="w-2 h-2 bg-black rounded-full opacity-20"></div>
-    </div>
+        <!-- Log Area -->
+        <div id="game-log" class="h-16 text-[10px] text-gray-400 overflow-y-auto log-container flex flex-col-reverse italic">
+            <div>Dungeon entered...</div>
+        </div>
 
-    <!-- コントロール -->
-    <div class="w-full max-w-xs flex flex-col items-center space-y-16">
-        
-        <!-- 時間設定 -->
-        <div id="settings" class="w-full space-y-6 transition-all duration-1000">
-            <input type="range" id="time-slider" min="0.5" max="15" step="0.5" value="3" class="w-full">
-            <div class="flex justify-center">
-                <span id="set-time-label" class="text-xs text-gray-500 tracking-[0.2em] font-medium uppercase">3 MINUTES</span>
+        <!-- Backpack Grid -->
+        <div class="flex-1 flex flex-col justify-center">
+            <div class="bg-gray-50 p-2 rounded-2xl shadow-inner border border-gray-200">
+                <div id="backpack-grid" class="grid grid-cols-5 gap-1">
+                    <!-- 25 Cells (5x5) -->
+                </div>
+            </div>
+            <p class="text-[10px] text-center text-gray-400 mt-2 uppercase tracking-widest">Tap items to use skills or potions</p>
+        </div>
+
+        <!-- Player Stats & Actions -->
+        <div class="space-y-3 pb-4">
+            <div class="flex justify-between items-center px-1">
+                <div class="flex-1 mr-4">
+                    <div class="flex justify-between text-xs mb-1 font-semibold">
+                        <span>HP</span>
+                        <span id="player-hp-text">20 / 20</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div id="player-hp-bar" class="health-bar bg-black w-full"></div>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div class="flex justify-between text-xs mb-1 font-semibold">
+                        <span>MP</span>
+                        <span id="player-mp-text">10 / 10</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div id="player-mp-bar" class="health-bar bg-blue-500 w-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="attack-btn" class="bg-black text-white py-4 rounded-xl font-bold active:bg-gray-800 transition shadow-lg">ATTACK</button>
+                <button id="end-turn-btn" class="bg-white border-2 border-black text-black py-4 rounded-xl font-bold active:bg-gray-50 transition">END TURN</button>
             </div>
         </div>
+    </main>
 
-        <!-- アクションボタン -->
-        <div class="flex flex-col items-center space-y-8">
-            <button id="start-btn" class="text-sm tracking-[0.5em] text-black border-b-2 border-transparent hover:border-black py-2 transition-all duration-700">
-                START
-            </button>
-            <button id="reset-btn" class="text-[10px] tracking-[0.3em] text-gray-300 uppercase opacity-0 pointer-events-none transition-all duration-1000">
-                Cancel Session
-            </button>
+    <!-- Reward / Shop / Level Up Overlays -->
+    <div id="overlay" class="fixed inset-0 bg-white/95 z-50 hidden flex flex-col p-8 items-center justify-center text-center">
+        <h2 id="overlay-title" class="text-3xl font-800 mb-2 italic">VICTORY</h2>
+        <p id="overlay-desc" class="text-gray-500 mb-8">You found something...</p>
+        <div id="overlay-content" class="w-full space-y-4 mb-8">
+            <!-- Dynamic content -->
         </div>
-    </div>
-
-    <!-- 完了オーバーレイ -->
-    <div id="overlay" class="fixed inset-0 bg-white flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-[2000ms] z-50 p-12 text-center">
-        <div class="w-2 h-2 bg-black rounded-full mb-10 animate-ping"></div>
-        <p class="text-base font-light tracking-[0.2em] text-gray-600 leading-relaxed">
-            一息つきました。<br>
-            新しい気持ちで始めましょう。
-        </p>
-        <button id="close-overlay" class="mt-20 text-[11px] tracking-[0.4em] text-gray-400 border border-gray-200 px-10 py-3 rounded-full uppercase">Return</button>
+        <button id="overlay-close" class="w-full max-w-xs bg-black text-white py-4 rounded-xl font-bold shadow-xl">CONTINUE</button>
     </div>
 
     <script>
-        const innerFill = document.getElementById('inner-fill');
-        const statusText = document.getElementById('status-text');
-        const startBtn = document.getElementById('start-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const timeSlider = document.getElementById('time-slider');
-        const setTimeLabel = document.getElementById('set-time-label');
-        const settingsDiv = document.getElementById('settings');
-        const breathNode = document.getElementById('breath-node');
-        const overlay = document.getElementById('overlay');
-        const closeOverlay = document.getElementById('close-overlay');
+        // --- Game Constants & State ---
+        const GRID_SIZE = 5;
+        const state = {
+            player: {
+                maxHp: 20, hp: 20,
+                maxMp: 10, mp: 10,
+                baseAtk: 2,
+                gold: 0,
+                lv: 1, exp: 0, expNext: 100,
+                skillPoints: 0,
+                backpack: Array(GRID_SIZE * GRID_SIZE).fill(null),
+                buffs: { atkMult: 1, mpCostRed: 0 }
+            },
+            floor: 1,
+            enemies: [],
+            isPlayerTurn: true,
+            turnCount: 0
+        };
 
-        let timeLeft = 180;
-        let totalTime = 180;
-        let timerInterval = null;
-        let isRunning = false;
+        const ITEM_TYPES = {
+            WEAPON: 'weapon',
+            SKILL: 'skill',
+            POTION: 'potion',
+            BOOST: 'boost'
+        };
 
-        function updateDisplay() {
-            // 時間の経過に合わせてスケールを0から1へ（満たしていく）
-            const progress = (totalTime - timeLeft) / totalTime;
-            innerFill.style.transform = `scale(${progress})`;
-        }
+        const DATABASE = {
+            items: [
+                { id: 'rusty_sword', name: 'Rusty Sword', type: ITEM_TYPES.WEAPON, atk: 2, desc: 'ATK +2', price: 10 },
+                { id: 'iron_blade', name: 'Iron Blade', type: ITEM_TYPES.WEAPON, atk: 5, desc: 'ATK +5', price: 30 },
+                { id: 'fireball', name: 'Fireball', type: ITEM_TYPES.SKILL, mp: 3, dmg: 8, desc: 'Cost 3MP, 8 DMG', price: 20 },
+                { id: 'heal_spell', name: 'Heal', type: ITEM_TYPES.SKILL, mp: 4, heal: 6, desc: 'Cost 4MP, +6 HP', price: 25 },
+                { id: 'hp_pot', name: 'HP Potion', type: ITEM_TYPES.POTION, heal: 10, desc: '+10 HP (Consumes)', price: 15 },
+                { id: 'sharpener', name: 'Sharpener', type: ITEM_TYPES.BOOST, atkMod: 0.5, desc: 'ATK +50%', price: 40 }
+            ],
+            monsters: [
+                { name: 'Slime', hp: 8, atk: 2, gold: 5, exp: 20 },
+                { name: 'Goblin', hp: 15, atk: 4, gold: 12, exp: 45 },
+                { name: 'Skeleton', hp: 22, atk: 6, gold: 20, exp: 70 },
+                { name: 'Gargoyle', hp: 50, atk: 10, gold: 100, exp: 200 }
+            ]
+        };
 
-        timeSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            totalTime = val * 60;
-            timeLeft = totalTime;
-            if (val === 0.5) {
-                setTimeLabel.textContent = `30 SECONDS`;
-            } else {
-                setTimeLabel.textContent = `${val} ${val == 1 ? 'MINUTE' : 'MINUTES'}`;
+        // --- Core UI Logic ---
+        function initGrid() {
+            const gridEl = document.getElementById('backpack-grid');
+            gridEl.innerHTML = '';
+            for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell rounded-lg flex items-center justify-center p-1 text-[8px] text-center font-bold bg-white';
+                cell.dataset.index = i;
+                cell.onclick = () => handleItemClick(i);
+                gridEl.appendChild(cell);
             }
-            updateDisplay();
-        });
+            updateGridDisplay();
+        }
 
-        function toggleTimer() {
-            if (isRunning) {
-                // 一時停止
-                clearInterval(timerInterval);
-                startBtn.textContent = 'RESUME';
-                statusText.textContent = '小休止';
-                breathNode.classList.remove('anim-breathing');
-                isRunning = false;
-            } else {
-                // 開始
-                isRunning = true;
-                startBtn.textContent = 'PAUSE';
-                statusText.textContent = 'ゆっくりと呼吸を';
-                
-                resetBtn.classList.remove('opacity-0', 'pointer-events-none');
-                settingsDiv.style.opacity = '0';
-                settingsDiv.style.pointerEvents = 'none';
-                
-                // 呼吸ガイド起動
-                breathNode.classList.add('opacity-100', 'anim-breathing');
+        function updateGridDisplay() {
+            const cells = document.querySelectorAll('.grid-cell');
+            state.player.backpack.forEach((item, i) => {
+                if (item) {
+                    cells[i].innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center rounded-md p-1 shadow-sm border border-gray-200 bg-white hover:bg-gray-50">
+                        <span class="truncate">${item.name}</span>
+                        <div class="w-full h-1 mt-1 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-black" style="width: 100%"></div>
+                        </div>
+                    </div>`;
+                    cells[i].classList.add('item-node');
+                } else {
+                    cells[i].innerHTML = '';
+                    cells[i].classList.remove('item-node');
+                }
+            });
+        }
 
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    updateDisplay();
-                    if (timeLeft <= 0) completeTimer();
-                }, 1000);
+        function log(msg) {
+            const logEl = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.textContent = msg;
+            logEl.prepend(entry);
+        }
+
+        function updateStats() {
+            document.getElementById('player-hp-text').textContent = `${Math.ceil(state.player.hp)} / ${state.player.maxHp}`;
+            document.getElementById('player-hp-bar').style.width = `${(state.player.hp / state.player.maxHp) * 100}%`;
+            document.getElementById('player-mp-text').textContent = `${state.player.mp} / ${state.player.maxMp}`;
+            document.getElementById('player-mp-bar').style.width = `${(state.player.mp / state.player.maxMp) * 100}%`;
+            document.getElementById('gold-text').textContent = `${state.player.gold}G`;
+            document.getElementById('level-text').textContent = `Lv.${state.player.lv} (${state.player.exp}/${state.player.expNext})`;
+            document.getElementById('floor-text').textContent = `Floor ${state.floor}`;
+        }
+
+        // --- Battle Logic ---
+        function spawnEnemies() {
+            const count = Math.min(3, Math.ceil(state.floor / 3));
+            state.enemies = [];
+            const container = document.getElementById('enemy-container');
+            container.innerHTML = '';
+
+            for (let i = 0; i < count; i++) {
+                const monsterBase = DATABASE.monsters[Math.min(DATABASE.monsters.length - 1, Math.floor(state.floor / 4))];
+                const monster = { ...monsterBase, hp: monsterBase.hp + (state.floor * 2), maxHp: monsterBase.hp + (state.floor * 2), id: i };
+                state.enemies.push(monster);
+
+                const el = document.createElement('div');
+                el.id = `enemy-${i}`;
+                el.className = 'flex flex-col items-center w-24 space-y-2 transform transition duration-500';
+                el.innerHTML = `
+                    <div class="text-[10px] font-bold uppercase tracking-widest">${monster.name}</div>
+                    <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-gray-200">
+                        ${getMonsterEmoji(monster.name)}
+                    </div>
+                    <div class="w-full px-2">
+                        <div class="flex justify-between text-[8px] font-bold mb-0.5">
+                            <span>HP</span><span id="enemy-hp-txt-${i}">${monster.hp}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                            <div id="enemy-hp-bar-${i}" class="bg-red-500 h-full w-full"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
             }
         }
 
-        function completeTimer() {
-            clearInterval(timerInterval);
-            overlay.classList.remove('pointer-events-none');
-            overlay.classList.add('opacity-100');
-            resetTimer();
+        function getMonsterEmoji(name) {
+            if (name === 'Slime') return '💧';
+            if (name === 'Goblin') return '👺';
+            if (name === 'Skeleton') return '💀';
+            if (name === 'Gargoyle') return '🦇';
+            return '👾';
         }
 
-        function resetTimer() {
-            clearInterval(timerInterval);
-            isRunning = false;
-            timeLeft = totalTime;
-            startBtn.textContent = 'START';
-            statusText.textContent = '心を静める準備';
-            resetBtn.classList.add('opacity-0', 'pointer-events-none');
-            settingsDiv.style.opacity = '1';
-            settingsDiv.style.pointerEvents = 'auto';
-            breathNode.classList.remove('opacity-100', 'anim-breathing');
-            updateDisplay();
+        function handleAttack() {
+            if (!state.isPlayerTurn || state.enemies.length === 0) return;
+            
+            // Calc Total ATK
+            let totalAtk = state.player.baseAtk;
+            let mult = 1;
+            state.player.backpack.forEach(item => {
+                if (!item) return;
+                if (item.type === ITEM_TYPES.WEAPON) totalAtk += item.atk;
+                if (item.type === ITEM_TYPES.BOOST && item.atkMod) mult += item.atkMod;
+            });
+            totalAtk *= mult;
+
+            // Damage first enemy
+            const target = state.enemies[0];
+            damageEnemy(target, totalAtk);
+            checkBattleEnd();
         }
 
-        startBtn.addEventListener('click', toggleTimer);
-        resetBtn.addEventListener('click', resetTimer);
-        closeOverlay.addEventListener('click', () => {
-            overlay.classList.add('opacity-0');
-            overlay.classList.add('pointer-events-none');
-        });
+        function damageEnemy(enemy, dmg) {
+            enemy.hp -= dmg;
+            log(`You hit ${enemy.name} for ${dmg.toFixed(1)}!`);
+            
+            const el = document.getElementById(`enemy-${enemy.id}`);
+            el.classList.add('animate-damage');
+            setTimeout(() => el.classList.remove('animate-damage'), 300);
 
-        updateDisplay();
+            if (enemy.hp <= 0) {
+                state.enemies = state.enemies.filter(e => e.id !== enemy.id);
+                document.getElementById(`enemy-${enemy.id}`).style.opacity = '0';
+                setTimeout(() => document.getElementById(`enemy-${enemy.id}`)?.remove(), 500);
+                log(`${enemy.name} defeated!`);
+                
+                // Gain rewards immediately
+                state.player.gold += enemy.gold;
+                state.player.exp += enemy.exp;
+                checkLevelUp();
+                updateStats();
+            } else {
+                updateEnemyUI(enemy);
+            }
+        }
+
+        function updateEnemyUI(enemy) {
+            document.getElementById(`enemy-hp-txt-${enemy.id}`).textContent = Math.ceil(enemy.hp);
+            document.getElementById(`enemy-hp-bar-${enemy.id}`).style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+        }
+
+        function checkBattleEnd() {
+            if (state.enemies.length === 0) {
+                setTimeout(() => {
+                    showOverlay('VICTORY', `You reached floor ${state.floor}`, [
+                        { label: 'Next Floor', action: nextFloor }
+                    ]);
+                }, 800);
+            }
+        }
+
+        function endTurn() {
+            if (!state.isPlayerTurn) return;
+            state.isPlayerTurn = false;
+            log("Enemy turn...");
+            
+            setTimeout(() => {
+                state.enemies.forEach(enemy => {
+                    const dmg = enemy.atk;
+                    state.player.hp -= dmg;
+                    log(`${enemy.name} attacks you for ${dmg}!`);
+                });
+                
+                if (state.player.hp <= 0) {
+                    showOverlay('DEFEAT', 'Your journey ends here.', [
+                        { label: 'Restart', action: () => window.location.reload() }
+                    ]);
+                } else {
+                    state.isPlayerTurn = true;
+                    state.player.mp = Math.min(state.player.maxMp, state.player.mp + 2); // Regen 2 MP
+                    log("Your turn! +2 MP");
+                    updateStats();
+                }
+            }, 600);
+        }
+
+        function handleItemClick(index) {
+            const item = state.player.backpack[index];
+            if (!item || !state.isPlayerTurn) return;
+
+            if (item.type === ITEM_TYPES.SKILL) {
+                if (state.player.mp >= item.mp) {
+                    state.player.mp -= item.mp;
+                    if (item.dmg && state.enemies.length > 0) {
+                        damageEnemy(state.enemies[0], item.dmg);
+                    }
+                    if (item.heal) {
+                        state.player.hp = Math.min(state.player.maxHp, state.player.hp + item.heal);
+                        log(`You cast Heal for ${item.heal}!`);
+                    }
+                    updateStats();
+                    checkBattleEnd();
+                } else {
+                    log("Not enough MP!");
+                }
+            } else if (item.type === ITEM_TYPES.POTION) {
+                state.player.hp = Math.min(state.player.maxHp, state.player.hp + item.heal);
+                log(`Drank potion: +${item.heal} HP`);
+                state.player.backpack[index] = null;
+                updateGridDisplay();
+                updateStats();
+            }
+        }
+
+        // --- Progression Logic ---
+        function checkLevelUp() {
+            if (state.player.exp >= state.player.expNext) {
+                state.player.lv++;
+                state.player.exp -= state.player.expNext;
+                state.player.expNext = Math.floor(state.player.expNext * 1.5);
+                state.player.maxHp += 5;
+                state.player.hp = state.player.maxHp;
+                log(`LEVEL UP! Now Lv.${state.player.lv}`);
+                
+                // Skill Point Choice
+                const randomSkills = [DATABASE.items[2], DATABASE.items[3]];
+                showOverlay('LEVEL UP', 'Pick a new skill', [
+                    { label: randomSkills[0].name, action: () => addItemToBackpack(randomSkills[0]) },
+                    { label: randomSkills[1].name, action: () => addItemToBackpack(randomSkills[1]) }
+                ]);
+            }
+        }
+
+        function addItemToBackpack(item) {
+            const emptyIdx = state.player.backpack.findIndex(s => s === null);
+            if (emptyIdx !== -1) {
+                state.player.backpack[emptyIdx] = { ...item };
+                updateGridDisplay();
+                log(`Acquired ${item.name}!`);
+            } else {
+                log("Backpack full!");
+            }
+        }
+
+        function nextFloor() {
+            state.floor++;
+            if (state.floor % 3 === 0) {
+                showShop();
+            } else {
+                spawnEnemies();
+                updateStats();
+            }
+        }
+
+        function showShop() {
+            const pool = DATABASE.items;
+            const items = [pool[Math.floor(Math.random()*pool.length)], pool[Math.floor(Math.random()*pool.length)]];
+            
+            showOverlay('MERCHANT', 'Wares for sale...', [
+                { label: `${items[0].name} (${items[0].price}G)`, action: () => buyItem(items[0]) },
+                { label: `${items[1].name} (${items[1].price}G)`, action: () => buyItem(items[1]) },
+                { label: 'Leave', action: () => { spawnEnemies(); updateStats(); } }
+            ]);
+        }
+
+        function buyItem(item) {
+            if (state.player.gold >= item.price) {
+                state.player.gold -= item.price;
+                addItemToBackpack(item);
+                updateStats();
+            } else {
+                log("Too expensive!");
+            }
+        }
+
+        // --- Overlay Logic ---
+        function showOverlay(title, desc, buttons) {
+            document.getElementById('overlay-title').textContent = title;
+            document.getElementById('overlay-desc').textContent = desc;
+            const content = document.getElementById('overlay-content');
+            content.innerHTML = '';
+            
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.className = 'w-full bg-gray-50 border border-gray-200 py-4 rounded-xl font-bold hover:bg-gray-100 transition';
+                b.textContent = btn.label;
+                b.onclick = () => {
+                    document.getElementById('overlay').classList.add('hidden');
+                    btn.action();
+                };
+                content.appendChild(b);
+            });
+            
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        // --- Initialization ---
+        window.onload = () => {
+            initGrid();
+            // Start items
+            addItemToBackpack(DATABASE.items[0]);
+            addItemToBackpack(DATABASE.items[4]);
+            
+            spawnEnemies();
+            updateStats();
+
+            document.getElementById('attack-btn').onclick = handleAttack;
+            document.getElementById('end-turn-btn').onclick = endTurn;
+            document.getElementById('overlay-close').onclick = () => {
+                document.getElementById('overlay').classList.add('hidden');
+            };
+        };
     </script>
 </body>
 </html>

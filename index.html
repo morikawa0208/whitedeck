@@ -1,1 +1,532 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>縦持ちハクスラ戦闘MVP</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-SnH5WK+bZxgPHs44uWix+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkR4j8R+E6M+0K5a6R9M6Q5a0XQ5D2R8wB5g=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #1a1f34;
+      --panel-2: #242b46;
+      --text: #eaf0ff;
+      --sub: #9ab0df;
+      --hp: #ff5470;
+      --gauge: #57d6ff;
+      --cp: #8fffa0;
+      --warn: #ffc857;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
 
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #1d2340 0%, var(--bg) 48%);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .app {
+      width: min(420px, 100%);
+      height: calc(100dvh - 20px);
+      background: linear-gradient(180deg, #141a30 0%, #0d1121 100%);
+      border-radius: 18px;
+      border: 1px solid #2b3564;
+      box-shadow: 0 12px 26px var(--shadow);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .top {
+      padding: 10px;
+      border-bottom: 1px solid #273258;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .enemy-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .enemy-card {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 8px;
+      transition: transform 0.12s;
+    }
+
+    .enemy-card.hit {
+      transform: translateX(2px);
+      filter: brightness(1.2);
+    }
+
+    .line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: var(--sub);
+    }
+
+    .name {
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .bar {
+      height: 8px;
+      width: 100%;
+      border-radius: 999px;
+      background: #10172e;
+      border: 1px solid #2a3158;
+      overflow: hidden;
+      margin-bottom: 3px;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.08s linear;
+    }
+
+    .fill.hp { background: linear-gradient(90deg, #ff3d66, var(--hp)); }
+    .fill.gauge { background: linear-gradient(90deg, #4ac2ff, var(--gauge)); }
+    .fill.cp { background: linear-gradient(90deg, #54e57f, var(--cp)); }
+
+    .middle {
+      padding: 10px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .state {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 8px;
+      font-size: 13px;
+      color: var(--sub);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .log {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 8px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      min-height: 0;
+      color: #cdd9ff;
+    }
+
+    .log p { margin: 0 0 4px; }
+
+    .bottom {
+      border-top: 1px solid #273258;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      display: grid;
+      gap: 8px;
+    }
+
+    .player-card {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 8px;
+    }
+
+    .skills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    button.skill {
+      border: 1px solid #41508b;
+      border-radius: 10px;
+      padding: 9px 6px;
+      background: linear-gradient(180deg, #2b396d 0%, #212c55 100%);
+      color: #f2f6ff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      gap: 4px;
+      place-items: center;
+      min-height: 58px;
+    }
+
+    button.skill i { font-size: 14px; }
+
+    button.skill:active { transform: translateY(1px); }
+
+    button.skill.disabled {
+      opacity: 0.45;
+      filter: grayscale(0.4);
+      border-style: dashed;
+    }
+
+    .auto {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .auto-slot {
+      background: var(--panel-2);
+      border: 1px solid #3e4d85;
+      border-radius: 10px;
+      padding: 6px;
+      color: #d6e2ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .victory {
+      color: #96ff9f;
+      font-weight: 700;
+    }
+
+    .defeat {
+      color: #ff9aa8;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="top">
+      <div id="enemyRow" class="enemy-row"></div>
+    </section>
+
+    <section class="middle">
+      <div class="state">
+        <span id="battleState"><i class="fa-solid fa-hourglass-half"></i> 戦闘中</span>
+        <span><i class="fa-solid fa-users"></i> 敵 <span id="aliveEnemyCount">0</span>/3</span>
+      </div>
+      <div id="log" class="log"></div>
+    </section>
+
+    <section class="bottom">
+      <div class="player-card">
+        <div class="line">
+          <span class="name"><i class="fa-solid fa-user-ninja"></i> プレイヤー</span>
+          <span id="playerNums"></span>
+        </div>
+        <div class="bar"><div id="playerHp" class="fill hp"></div></div>
+        <div class="bar"><div id="playerGauge" class="fill gauge"></div></div>
+        <div class="bar"><div id="playerCp" class="fill cp"></div></div>
+      </div>
+
+      <div class="skills" id="manualSkills"></div>
+
+      <div class="auto">
+        <div class="auto-slot"><span><i class="fa-solid fa-1"></i> 自動1</span><span id="auto1">-</span></div>
+        <div class="auto-slot"><span><i class="fa-solid fa-2"></i> 自動2</span><span id="auto2">-</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SKILLS = {
+      basic: { id: "basic", name: "通常斬り", icon: "fa-solid fa-sword", cpCost: 0, cooldown: 0.3, power: 1.0 },
+      heavy: { id: "heavy", name: "強打", icon: "fa-solid fa-hammer", cpCost: 20, cooldown: 1.2, power: 1.7 },
+      twin: { id: "twin", name: "二連撃", icon: "fa-solid fa-bolt", cpCost: 16, cooldown: 1.8, power: 0.95, hits: 2 },
+      puncture: { id: "puncture", name: "貫通", icon: "fa-solid fa-crosshairs", cpCost: 26, cooldown: 2.4, power: 2.0 },
+      burst: { id: "burst", name: "気合", icon: "fa-solid fa-fire", cpCost: 30, cooldown: 3.0, power: 2.4 },
+      guardBreak: { id: "guardBreak", name: "崩し", icon: "fa-solid fa-shield-halved", cpCost: 18, cooldown: 1.6, power: 1.4 },
+      quick: { id: "quick", name: "速打", icon: "fa-solid fa-wind", cpCost: 12, cooldown: 1.0, power: 1.15 }
+    };
+
+    const state = {
+      running: true,
+      lastTs: 0,
+      player: {
+        id: "player",
+        name: "プレイヤー",
+        hp: 420,
+        maxHp: 420,
+        atk: 44,
+        def: 16,
+        speed: 34,
+        gauge: 0,
+        cp: 40,
+        maxCp: 100,
+        cooldowns: {},
+        autoSlots: ["basic", "heavy"],
+        manualSlots: ["twin", "puncture", "guardBreak", "quick", "burst", "basic"],
+        queuedManual: null
+      },
+      enemies: Array.from({ length: 3 }, (_, i) => ({
+        id: `enemy-${i + 1}`,
+        name: `敵 ${i + 1}`,
+        hp: 160 + i * 30,
+        maxHp: 160 + i * 30,
+        atk: 24 + i * 4,
+        def: 8 + i * 2,
+        speed: 26 + i * 2,
+        gauge: 0,
+        cooldowns: {},
+        alive: true
+      })),
+      log: []
+    };
+
+    const enemyRow = document.getElementById("enemyRow");
+    const logEl = document.getElementById("log");
+    const battleStateEl = document.getElementById("battleState");
+    const aliveEnemyCountEl = document.getElementById("aliveEnemyCount");
+    const playerNumsEl = document.getElementById("playerNums");
+    const playerHpEl = document.getElementById("playerHp");
+    const playerGaugeEl = document.getElementById("playerGauge");
+    const playerCpEl = document.getElementById("playerCp");
+    const manualSkillsEl = document.getElementById("manualSkills");
+    const auto1El = document.getElementById("auto1");
+    const auto2El = document.getElementById("auto2");
+
+    function addLog(msg) {
+      state.log.unshift(`<p>${msg}</p>`);
+      state.log = state.log.slice(0, 50);
+      logEl.innerHTML = state.log.join("");
+    }
+
+    function livingEnemies() {
+      return state.enemies.filter(e => e.alive);
+    }
+
+    function randomEnemy() {
+      const alive = livingEnemies();
+      if (alive.length === 0) return null;
+      return alive[Math.floor(Math.random() * alive.length)];
+    }
+
+    function damageCalc(attacker, target, skill) {
+      const variance = 0.88 + Math.random() * 0.24;
+      const raw = attacker.atk * skill.power * variance;
+      return Math.max(1, Math.floor(raw - target.def * 0.55));
+    }
+
+    function canUseSkill(actor, skillId) {
+      const s = SKILLS[skillId];
+      const cd = actor.cooldowns[skillId] || 0;
+      const cp = actor.cp ?? 0;
+      return s && cd <= 0 && cp >= s.cpCost;
+    }
+
+    function applySkill(attacker, target, skillId) {
+      const skill = SKILLS[skillId] || SKILLS.basic;
+      if (!target) return;
+      const hits = skill.hits || 1;
+      let total = 0;
+      for (let i = 0; i < hits; i += 1) {
+        const dmg = damageCalc(attacker, target, skill);
+        total += dmg;
+        target.hp = Math.max(0, target.hp - dmg);
+      }
+
+      if (attacker.id === "player") {
+        attacker.cp = Math.max(0, attacker.cp - skill.cpCost);
+        attacker.cp = Math.min(attacker.maxCp, attacker.cp + 8);
+      }
+
+      attacker.cooldowns[skill.id] = skill.cooldown;
+      target.gauge = Math.max(0, target.gauge - 18);
+
+      addLog(`<i class="${skill.icon}"></i> ${attacker.name}の${skill.name} → ${target.name}に <b>${total}</b> ダメージ`);
+
+      if (target.hp <= 0) {
+        target.alive = false;
+        addLog(`<i class="fa-solid fa-skull"></i> ${target.name} を撃破`);
+      }
+    }
+
+    function selectPlayerSkill() {
+      const p = state.player;
+      if (p.queuedManual && canUseSkill(p, p.queuedManual)) {
+        const chosen = p.queuedManual;
+        p.queuedManual = null;
+        return chosen;
+      }
+
+      const [slot1, slot2] = p.autoSlots;
+      if (canUseSkill(p, slot2)) return slot2;
+      if (canUseSkill(p, slot1)) return slot1;
+      return "basic";
+    }
+
+    function playerAct() {
+      const target = randomEnemy();
+      if (!target) return;
+      const skillId = selectPlayerSkill();
+      applySkill(state.player, target, skillId);
+    }
+
+    function enemyAct(enemy) {
+      if (!enemy.alive || state.player.hp <= 0) return;
+      const skill = { ...SKILLS.basic, name: "噛み付き", icon: "fa-solid fa-fang" };
+      const dmg = Math.max(1, Math.floor((enemy.atk * (0.85 + Math.random() * 0.25)) - state.player.def * 0.5));
+      state.player.hp = Math.max(0, state.player.hp - dmg);
+      enemy.cooldowns.basic = 0.5;
+      state.player.gauge = Math.max(0, state.player.gauge - 10);
+      addLog(`<i class="${skill.icon}"></i> ${enemy.name}の${skill.name} → プレイヤーに <b>${dmg}</b> ダメージ`);
+    }
+
+    function updateCooldowns(actor, dt) {
+      Object.keys(actor.cooldowns).forEach(id => {
+        actor.cooldowns[id] = Math.max(0, actor.cooldowns[id] - dt);
+      });
+    }
+
+    function update(dt) {
+      if (!state.running) return;
+
+      const p = state.player;
+      if (p.hp > 0) {
+        p.gauge = Math.min(100, p.gauge + p.speed * dt);
+        p.cp = Math.min(p.maxCp, p.cp + 5.5 * dt);
+      }
+      updateCooldowns(p, dt);
+
+      for (const enemy of state.enemies) {
+        if (!enemy.alive) continue;
+        enemy.gauge = Math.min(100, enemy.gauge + enemy.speed * dt);
+        updateCooldowns(enemy, dt);
+      }
+
+      if (p.hp > 0 && p.gauge >= 100) {
+        p.gauge -= 100;
+        playerAct();
+      }
+
+      for (const enemy of state.enemies) {
+        if (enemy.alive && enemy.gauge >= 100 && state.player.hp > 0) {
+          enemy.gauge -= 100;
+          enemyAct(enemy);
+        }
+      }
+
+      if (state.player.hp <= 0) {
+        state.running = false;
+        battleStateEl.innerHTML = '<span class="defeat"><i class="fa-solid fa-heart-crack"></i> 敗北</span>';
+        addLog("<span class='defeat'>プレイヤーは力尽きた...</span>");
+      } else if (livingEnemies().length === 0) {
+        state.running = false;
+        battleStateEl.innerHTML = '<span class="victory"><i class="fa-solid fa-crown"></i> 勝利</span>';
+        addLog("<span class='victory'>戦闘勝利！</span>");
+      }
+    }
+
+    function renderEnemies() {
+      enemyRow.innerHTML = state.enemies.map(e => {
+        const hpRate = Math.max(0, (e.hp / e.maxHp) * 100);
+        return `
+          <article class="enemy-card ${e.alive ? "" : "disabled"}" id="card-${e.id}">
+            <div class="line">
+              <span class="name"><i class="fa-solid fa-skull-crossbones"></i> ${e.name}</span>
+              <span>${Math.max(0, e.hp)}/${e.maxHp}</span>
+            </div>
+            <div class="bar"><div class="fill hp" style="width:${hpRate}%"></div></div>
+            <div class="bar"><div class="fill gauge" style="width:${e.alive ? e.gauge : 0}%"></div></div>
+          </article>
+        `;
+      }).join("");
+      aliveEnemyCountEl.textContent = String(livingEnemies().length);
+    }
+
+    function renderPlayer() {
+      const p = state.player;
+      playerNumsEl.textContent = `HP ${Math.max(0, Math.floor(p.hp))}/${p.maxHp} | CP ${Math.floor(p.cp)}/${p.maxCp}`;
+      playerHpEl.style.width = `${Math.max(0, (p.hp / p.maxHp) * 100)}%`;
+      playerGaugeEl.style.width = `${p.gauge}%`;
+      playerCpEl.style.width = `${(p.cp / p.maxCp) * 100}%`;
+
+      auto1El.textContent = SKILLS[p.autoSlots[0]].name;
+      auto2El.textContent = SKILLS[p.autoSlots[1]].name;
+    }
+
+    function renderManualSkills() {
+      const p = state.player;
+      manualSkillsEl.innerHTML = p.manualSlots.map((id, i) => {
+        const s = SKILLS[id];
+        const use = canUseSkill(p, id);
+        const queued = p.queuedManual === id;
+        return `
+          <button class="skill ${use ? "" : "disabled"}" data-id="${id}" type="button">
+            <i class="${s.icon}"></i>
+            <span>${i + 1}. ${s.name}</span>
+            <small>${queued ? "予約中" : `CP ${s.cpCost}`}</small>
+          </button>
+        `;
+      }).join("");
+
+      manualSkillsEl.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!state.running) return;
+          const id = btn.dataset.id;
+          if (!canUseSkill(state.player, id)) {
+            addLog(`<i class="fa-solid fa-ban"></i> ${SKILLS[id].name} はCP不足 or CD中`);
+            return;
+          }
+          state.player.queuedManual = id;
+          addLog(`<i class="fa-solid fa-hand"></i> ${SKILLS[id].name} を予約`);
+          renderManualSkills();
+        });
+      });
+    }
+
+    function render() {
+      renderEnemies();
+      renderPlayer();
+      renderManualSkills();
+    }
+
+    function loop(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      const dt = Math.min(0.033, (ts - state.lastTs) / 1000);
+      state.lastTs = ts;
+      update(dt);
+      renderEnemies();
+      renderPlayer();
+      requestAnimationFrame(loop);
+    }
+
+    function init() {
+      addLog("<i class='fa-solid fa-dragon'></i> 戦闘開始");
+      addLog("自動発動: 2枠目CPチェック→不足時1枠目");
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    init();
+  </script>
+</body>
+</html>

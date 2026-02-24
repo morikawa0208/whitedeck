@@ -1,1 +1,683 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>縦持ちハクスラ戦闘MVP</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #1a1f34;
+      --panel-2: #242b46;
+      --text: #eaf0ff;
+      --sub: #9ab0df;
+      --hp: #ff5470;
+      --gauge: #57d6ff;
+      --cp: #8fffa0;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
 
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #1d2340 0%, var(--bg) 48%);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .app {
+      width: min(420px, 100%);
+      height: calc(100dvh - 20px);
+      background: linear-gradient(180deg, #141a30 0%, #0d1121 100%);
+      border-radius: 18px;
+      border: 1px solid #2b3564;
+      box-shadow: 0 12px 26px var(--shadow);
+      display: grid;
+      grid-template-rows: clamp(120px, 26dvh, 220px) auto minmax(0, 1fr);
+      overflow: hidden;
+      position: relative;
+    }
+
+    #popupLayer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 20;
+    }
+
+    .popup {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      animation: floatUp 800ms ease-out forwards;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .popup .skill {
+      display: block;
+      font-size: 10px;
+      color: #ffe8a6;
+      margin-bottom: 1px;
+    }
+
+    .popup .value {
+      display: block;
+      font-size: 17px;
+    }
+
+    .popup.damage .value { color: #ff8398; }
+    .popup.heal .value { color: #8fffa0; }
+
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translate(-50%, -36%); }
+      15% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, -165%); }
+    }
+
+    .top {
+      padding: 4px;
+      border-bottom: 1px solid #273258;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .enemy-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .enemy-card {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 4px;
+      transition: transform 0.12s;
+    }
+
+    .line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 2px;
+      color: var(--sub);
+    }
+
+    .name {
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .bar {
+      height: 8px;
+      width: 100%;
+      border-radius: 999px;
+      background: #10172e;
+      border: 1px solid #2a3158;
+      overflow: hidden;
+      margin-bottom: 3px;
+      position: relative;
+    }
+
+    .bar.stat {
+      height: 16px;
+    }
+
+    .bar-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #f7fbff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.72);
+      z-index: 1;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.08s linear;
+    }
+
+    .fill.hp { background: linear-gradient(90deg, #ff3d66, var(--hp)); }
+    .fill.gauge { background: linear-gradient(90deg, #4ac2ff, var(--gauge)); }
+    .fill.cp { background: linear-gradient(90deg, #54e57f, var(--cp)); }
+
+    .middle {
+      padding: 10px;
+      min-height: 0;
+      height: clamp(120px, 26dvh, 220px);
+      max-height: clamp(120px, 26dvh, 220px);
+    }
+
+    .log {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 8px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      height: 100%;
+      min-height: 0;
+      color: #cdd9ff;
+    }
+
+    .log p { margin: 0 0 4px; }
+
+    .bottom {
+      border-top: 1px solid #273258;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      display: grid;
+      gap: 6px;
+    }
+
+    .player-card {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .targets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .skills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    button.target {
+      border: 1px solid #41508b;
+      border-radius: 10px;
+      padding: 6px 5px;
+      background: linear-gradient(180deg, #2a335e 0%, #1f2747 100%);
+      color: #f2f6ff;
+      font-size: 10px;
+      font-weight: 700;
+      display: grid;
+      gap: 4px;
+      place-items: center;
+      min-height: 42px;
+    }
+
+    button.target.selected {
+      border-color: #7bc3ff;
+      box-shadow: 0 0 0 1px rgba(123, 195, 255, 0.45) inset;
+    }
+
+    button.target.disabled,
+    button.skill.disabled {
+      opacity: 0.45;
+      filter: grayscale(0.4);
+      border-style: dashed;
+    }
+
+    button.skill {
+      border: 1px solid #41508b;
+      border-radius: 10px;
+      padding: 7px 5px;
+      background: linear-gradient(180deg, #2b396d 0%, #212c55 100%);
+      color: #f2f6ff;
+      font-size: 10px;
+      font-weight: 700;
+      display: grid;
+      gap: 4px;
+      place-items: center;
+      min-height: 46px;
+    }
+
+    button.skill i { font-size: 12px; }
+    button.skill:active { transform: translateY(1px); }
+
+    .auto {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 10px;
+    }
+
+    .auto-slot {
+      background: var(--panel-2);
+      border: 1px solid #3e4d85;
+      border-radius: 10px;
+      padding: 4px;
+      color: #d6e2ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+
+    @media (max-height: 760px) {
+      .app {
+        grid-template-rows: clamp(110px, 24dvh, 180px) auto minmax(0, 1fr);
+      }
+
+      .middle {
+        height: clamp(110px, 24dvh, 180px);
+        max-height: clamp(110px, 24dvh, 180px);
+      }
+    }
+
+    .victory { color: #96ff9f; font-weight: 700; }
+    .defeat { color: #ff9aa8; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <div id="popupLayer"></div>
+
+    <section class="middle">
+      <div id="log" class="log"></div>
+    </section>
+
+    <section class="top">
+      <div id="enemyRow" class="enemy-row"></div>
+    </section>
+
+    <section class="bottom">
+      <div class="player-card" id="playerCard">
+        <div class="line">
+          <span class="name"><i class="fa-solid fa-user-ninja"></i> プレイヤー</span>
+          <span id="aliveEnemyInfo"><i class="fa-solid fa-users"></i> 敵 0/3</span>
+        </div>
+        <div class="bar stat"><div id="playerHp" class="fill hp"></div><span id="playerHpText" class="bar-text"></span></div>
+        <div class="bar"><div id="playerGauge" class="fill gauge"></div></div>
+        <div class="bar stat"><div id="playerCp" class="fill cp"></div><span id="playerCpText" class="bar-text"></span></div>
+      </div>
+
+      <div class="targets" id="targetButtons"></div>
+      <div class="skills" id="manualSkills"></div>
+
+      <div class="auto">
+        <div class="auto-slot"><span><i class="fa-solid fa-1"></i> 自動1</span><span id="auto1">-</span></div>
+        <div class="auto-slot"><span><i class="fa-solid fa-2"></i> 自動2</span><span id="auto2">-</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SKILLS = {
+      basic: { id: "basic", name: "通常斬り", icon: "fa-solid fa-sword", useCp: 0, gainCp: 7, cooldown: 0.3, power: 1.0 },
+      heavy: { id: "heavy", name: "強打", icon: "fa-solid fa-hammer", useCp: 20, gainCp: 0, cooldown: 1.2, power: 1.7 },
+      twin: { id: "twin", name: "二連撃", icon: "fa-solid fa-bolt", useCp: 16, gainCp: 0, cooldown: 1.8, power: 0.95, hits: 2 },
+      puncture: { id: "puncture", name: "貫通", icon: "fa-solid fa-crosshairs", useCp: 26, gainCp: 0, cooldown: 2.4, power: 2.0 },
+      burst: { id: "burst", name: "気合", icon: "fa-solid fa-fire", useCp: 30, gainCp: 0, cooldown: 3.0, power: 2.4 },
+      guardBreak: { id: "guardBreak", name: "崩し", icon: "fa-solid fa-shield-halved", useCp: 18, gainCp: 0, cooldown: 1.6, power: 1.4 },
+      quick: { id: "quick", name: "速打", icon: "fa-solid fa-wind", useCp: 12, gainCp: 0, cooldown: 1.0, power: 1.15 }
+    };
+
+    const state = {
+      running: true,
+      lastTs: 0,
+      player: {
+        id: "player",
+        name: "プレイヤー",
+        hp: 420,
+        maxHp: 420,
+        atk: 44,
+        def: 16,
+        speed: 34,
+        gauge: 0,
+        cp: 40,
+        maxCp: 100,
+        cooldowns: {},
+        autoSlots: ["basic", "heavy"],
+        manualSlots: ["twin", "puncture", "guardBreak", "quick", "burst", "basic"],
+        targetEnemyId: "enemy-1"
+      },
+      enemies: Array.from({ length: 3 }, (_, i) => ({
+        id: `enemy-${i + 1}`,
+        name: `敵 ${i + 1}`,
+        hp: 160 + i * 30,
+        maxHp: 160 + i * 30,
+        atk: 24 + i * 4,
+        def: 8 + i * 2,
+        speed: 26 + i * 2,
+        gauge: 0,
+        cooldowns: {},
+        alive: true
+      })),
+      log: [],
+      rewards: { exp: 0, gold: 0, drops: [] }
+    };
+
+    const appEl = document.getElementById("app");
+    const popupLayerEl = document.getElementById("popupLayer");
+    const enemyRow = document.getElementById("enemyRow");
+    const logEl = document.getElementById("log");
+    const aliveEnemyInfoEl = document.getElementById("aliveEnemyInfo");
+    const playerHpEl = document.getElementById("playerHp");
+    const playerGaugeEl = document.getElementById("playerGauge");
+    const playerCpEl = document.getElementById("playerCp");
+    const playerHpTextEl = document.getElementById("playerHpText");
+    const playerCpTextEl = document.getElementById("playerCpText");
+    const manualSkillsEl = document.getElementById("manualSkills");
+    const targetButtonsEl = document.getElementById("targetButtons");
+    const auto1El = document.getElementById("auto1");
+    const auto2El = document.getElementById("auto2");
+
+    function addLog(msg) {
+      state.log.push(`<p>${msg}</p>`);
+      state.log = state.log.slice(-50);
+      logEl.innerHTML = state.log.join("");
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function livingEnemies() {
+      return state.enemies.filter(e => e.alive);
+    }
+
+    function randomEnemy() {
+      const alive = livingEnemies();
+      if (alive.length === 0) return null;
+      return alive[Math.floor(Math.random() * alive.length)];
+    }
+
+    function selectedEnemy() {
+      const target = state.enemies.find(e => e.id === state.player.targetEnemyId && e.alive);
+      return target || randomEnemy();
+    }
+
+    function getTargetElement(targetId) {
+      if (targetId === "player") return document.getElementById("playerCard");
+      return document.getElementById(`card-${targetId}`);
+    }
+
+    function spawnPopup(targetId, value, type, skillName = "") {
+      const targetEl = getTargetElement(targetId);
+      if (!targetEl) return;
+      const appRect = appEl.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const x = targetRect.left - appRect.left + targetRect.width / 2;
+      const y = targetRect.top - appRect.top + targetRect.height / 2;
+      const popup = document.createElement("div");
+      popup.className = `popup ${type}`;
+      popup.style.left = `${x}px`;
+      popup.style.top = `${y}px`;
+      popup.innerHTML = `${skillName ? `<span class="skill">${skillName}</span>` : ""}<span class="value">${value > 0 ? `-${value}` : Math.abs(value)}</span>`;
+      popupLayerEl.appendChild(popup);
+      setTimeout(() => popup.remove(), 820);
+    }
+
+    function damageCalc(attacker, target, skill) {
+      const variance = 0.88 + Math.random() * 0.24;
+      const raw = attacker.atk * skill.power * variance;
+      return Math.max(1, Math.floor(raw - target.def * 0.55));
+    }
+
+    function canUseSkill(actor, skillId) {
+      const s = SKILLS[skillId];
+      const cd = actor.cooldowns[skillId] || 0;
+      const cp = actor.cp ?? 0;
+      return s && cd <= 0 && cp >= s.useCp;
+    }
+
+    function rollEnemyReward(enemy) {
+      const exp = 18 + Math.floor(Math.random() * 8);
+      const gold = 12 + Math.floor(Math.random() * 10);
+      const dropPool = [
+        { name: "粗い皮", rate: 0.35 },
+        { name: "鉄の欠片", rate: 0.22 },
+        { name: "青ポーション", rate: 0.14 }
+      ];
+      const drop = dropPool.find(item => Math.random() < item.rate) || null;
+      return { enemyId: enemy.id, enemyName: enemy.name, exp, gold, drop };
+    }
+
+    function onEnemyDefeated(enemy) {
+      const reward = rollEnemyReward(enemy);
+      state.rewards.exp += reward.exp;
+      state.rewards.gold += reward.gold;
+      if (reward.drop) state.rewards.drops.push(reward.drop.name);
+      addLog(`<i class="fa-solid fa-coins"></i> ${reward.enemyName}報酬 EXP+${reward.exp} / Gold+${reward.gold}${reward.drop ? ` / ${reward.drop.name}` : ""}`);
+      return reward;
+    }
+
+    function applySkill(attacker, target, skillId) {
+      const skill = SKILLS[skillId] || SKILLS.basic;
+      if (!target) return false;
+      const hits = skill.hits || 1;
+      let total = 0;
+      for (let i = 0; i < hits; i += 1) {
+        const dmg = damageCalc(attacker, target, skill);
+        total += dmg;
+        target.hp = Math.max(0, target.hp - dmg);
+      }
+
+      if (attacker.id === "player") {
+        const cpBefore = attacker.cp;
+        attacker.cp = Math.max(0, attacker.cp - skill.useCp + skill.gainCp);
+        attacker.cp = Math.min(attacker.maxCp, attacker.cp);
+        const cpDiff = attacker.cp - cpBefore;
+        if (cpDiff > 0) {
+          spawnPopup("player", -cpDiff, "heal", skill.name);
+        }
+      }
+
+      attacker.cooldowns[skill.id] = skill.cooldown;
+
+      spawnPopup(target.id, total, "damage", skill.name);
+      addLog(`<i class="${skill.icon}"></i> ${attacker.name}の${skill.name} → ${target.name}に <b>${total}</b> ダメージ`);
+
+      if (target.hp <= 0) {
+        target.alive = false;
+        addLog(`<i class="fa-solid fa-skull"></i> ${target.name} を撃破`);
+        onEnemyDefeated(target);
+      }
+      return true;
+    }
+
+    function selectPlayerSkill() {
+      const p = state.player;
+      const [slot1, slot2] = p.autoSlots;
+      if (canUseSkill(p, slot2)) return slot2;
+      if (canUseSkill(p, slot1)) return slot1;
+      return "basic";
+    }
+
+    function playerAct() {
+      const target = selectedEnemy();
+      if (!target) return;
+      const skillId = selectPlayerSkill();
+      applySkill(state.player, target, skillId);
+    }
+
+    function enemyAct(enemy) {
+      if (!enemy.alive || state.player.hp <= 0) return;
+      const skill = { ...SKILLS.basic, name: "噛み付き", icon: "fa-solid fa-fang" };
+      const dmg = Math.max(1, Math.floor((enemy.atk * (0.85 + Math.random() * 0.25)) - state.player.def * 0.5));
+      state.player.hp = Math.max(0, state.player.hp - dmg);
+      enemy.cooldowns.basic = 0.5;
+      spawnPopup("player", dmg, "damage", skill.name);
+      addLog(`<i class="${skill.icon}"></i> ${enemy.name}の${skill.name} → プレイヤーに <b>${dmg}</b> ダメージ`);
+    }
+
+    function updateCooldowns(actor, dt) {
+      Object.keys(actor.cooldowns).forEach(id => {
+        actor.cooldowns[id] = Math.max(0, actor.cooldowns[id] - dt);
+      });
+    }
+
+    function update(dt) {
+      if (!state.running) return;
+
+      const p = state.player;
+      if (p.hp > 0) {
+        p.gauge = Math.min(100, p.gauge + p.speed * dt);
+      }
+      updateCooldowns(p, dt);
+
+      for (const enemy of state.enemies) {
+        if (!enemy.alive) continue;
+        enemy.gauge = Math.min(100, enemy.gauge + enemy.speed * dt);
+        updateCooldowns(enemy, dt);
+      }
+
+      if (p.hp > 0 && p.gauge >= 100) {
+        p.gauge -= 100;
+        playerAct();
+      }
+
+      for (const enemy of state.enemies) {
+        if (enemy.alive && enemy.gauge >= 100 && state.player.hp > 0) {
+          enemy.gauge -= 100;
+          enemyAct(enemy);
+        }
+      }
+
+      if (state.player.hp <= 0) {
+        state.running = false;
+        addLog("<span class='defeat'>プレイヤーは力尽きた...</span>");
+      } else if (livingEnemies().length === 0) {
+        state.running = false;
+        addLog("<span class='victory'>戦闘勝利！</span>");
+      }
+    }
+
+    function renderTargets() {
+      targetButtonsEl.innerHTML = state.enemies.map((e, i) => {
+        const selected = state.player.targetEnemyId === e.id;
+        return `
+          <button class="target ${selected ? "selected" : ""} ${e.alive ? "" : "disabled"}" data-id="${e.id}" type="button">
+            <i class="fa-solid fa-bullseye"></i>
+            <span>T${i + 1} ${e.alive ? "選択" : "撃破"}</span>
+          </button>
+        `;
+      }).join("");
+
+      targetButtonsEl.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          const enemy = state.enemies.find(e => e.id === id);
+          if (!enemy || !enemy.alive) return;
+          state.player.targetEnemyId = id;
+          addLog(`<i class="fa-solid fa-bullseye"></i> ターゲットを${enemy.name}に変更`);
+          renderTargets();
+        });
+      });
+    }
+
+    function renderEnemies() {
+      enemyRow.innerHTML = state.enemies.map(e => {
+        const hpRate = Math.max(0, (e.hp / e.maxHp) * 100);
+        return `
+          <article class="enemy-card ${e.alive ? "" : "disabled"}" id="card-${e.id}">
+            <div class="line">
+              <span class="name"><i class="fa-solid fa-skull-crossbones"></i> ${e.name}</span>
+            </div>
+            <div class="bar stat"><div class="fill hp" style="width:${hpRate}%"></div><span class="bar-text">HP ${Math.max(0, e.hp)}/${e.maxHp}</span></div>
+            <div class="bar"><div class="fill gauge" style="width:${e.alive ? e.gauge : 0}%"></div></div>
+          </article>
+        `;
+      }).join("");
+      aliveEnemyInfoEl.innerHTML = `<i class="fa-solid fa-users"></i> 敵 ${livingEnemies().length}/3`;
+    }
+
+    function renderPlayer() {
+      const p = state.player;
+      playerHpEl.style.width = `${Math.max(0, (p.hp / p.maxHp) * 100)}%`;
+      playerGaugeEl.style.width = `${p.gauge}%`;
+      playerCpEl.style.width = `${(p.cp / p.maxCp) * 100}%`;
+      playerHpTextEl.textContent = `HP ${Math.max(0, Math.floor(p.hp))}/${p.maxHp}`;
+      playerCpTextEl.textContent = `CP ${Math.floor(p.cp)}/${p.maxCp}`;
+
+      auto1El.textContent = SKILLS[p.autoSlots[0]].name;
+      auto2El.textContent = SKILLS[p.autoSlots[1]].name;
+    }
+
+    function renderManualSkills() {
+      const p = state.player;
+      manualSkillsEl.innerHTML = p.manualSlots.map((id, i) => {
+        const s = SKILLS[id];
+        const cd = p.cooldowns[id] || 0;
+        const cpEnough = p.cp >= s.useCp;
+        const disabled = cd > 0 || !cpEnough || !state.running;
+        return `
+          <button class="skill ${disabled ? "disabled" : ""}" data-id="${id}" type="button">
+            <i class="${s.icon}"></i>
+            <span>${i + 1}. ${s.name}</span>
+            <small>${cd > 0 ? `CT ${cd.toFixed(1)}s` : `消費${s.useCp}/獲得${s.gainCp}`}</small>
+          </button>
+        `;
+      }).join("");
+
+      manualSkillsEl.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!state.running || state.player.hp <= 0) return;
+          const id = btn.dataset.id;
+          const skill = SKILLS[id];
+          const cd = state.player.cooldowns[id] || 0;
+          if (cd > 0) {
+            addLog(`<i class="fa-solid fa-hourglass-half"></i> ${skill.name} はクールタイム中`);
+            return;
+          }
+          if (state.player.cp < skill.useCp) {
+            addLog(`<i class="fa-solid fa-ban"></i> CPが足りません`);
+            return;
+          }
+          const target = selectedEnemy();
+          if (!target) return;
+          applySkill(state.player, target, id);
+          renderManualSkills();
+        });
+      });
+    }
+
+    function render() {
+      renderEnemies();
+      renderPlayer();
+      renderTargets();
+      renderManualSkills();
+    }
+
+    function loop(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      const dt = Math.min(0.033, (ts - state.lastTs) / 1000);
+      state.lastTs = ts;
+      update(dt);
+      renderEnemies();
+      renderPlayer();
+      renderManualSkills();
+      requestAnimationFrame(loop);
+    }
+
+    function init() {
+      addLog("<i class='fa-solid fa-dragon'></i> 戦闘開始");
+      addLog("自動発動: 2枠目CPチェック→不足時1枠目");
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    init();
+  </script>
+</body>
+</html>

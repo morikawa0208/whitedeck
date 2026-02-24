@@ -53,6 +53,79 @@
       position: relative;
     }
 
+    .hidden { display: none !important; }
+
+    .base-screen {
+      position: absolute;
+      inset: 0;
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 10px;
+      background: linear-gradient(180deg, #141a30 0%, #0d1121 100%);
+      z-index: 15;
+    }
+
+    .base-title {
+      background: var(--panel);
+      border: 1px solid #2d3862;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .base-help {
+      font-size: 11px;
+      color: var(--sub);
+      margin-top: 4px;
+    }
+
+    .stage-list {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      overflow: auto;
+    }
+
+    .stage-btn {
+      border: 1px solid #41508b;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #2b396d 0%, #212c55 100%);
+      color: #f2f6ff;
+      padding: 10px;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .stage-btn small {
+      color: #c7d7ff;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .stage-btn.selected {
+      border-color: #7bc3ff;
+      box-shadow: 0 0 0 1px rgba(123, 195, 255, 0.45) inset;
+    }
+
+    .back-btn {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      z-index: 16;
+      border: 1px solid #4f609f;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #2c3a6d 0%, #212b53 100%);
+      color: #f2f6ff;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
     #popupLayer {
       position: absolute;
       inset: 0;
@@ -293,17 +366,28 @@
 </head>
 <body>
   <main class="app" id="app">
-    <div id="popupLayer"></div>
-
-    <section class="middle">
-      <div id="log" class="log"></div>
+    <section id="baseScreen" class="base-screen">
+      <div class="base-title">
+        <i class="fa-solid fa-house"></i> 拠点
+        <div class="base-help">出撃するステージを選んでください。</div>
+      </div>
+      <div class="base-title"><i class="fa-solid fa-map"></i> ステージ選択</div>
+      <div id="stageList" class="stage-list"></div>
     </section>
 
-    <section class="top">
-      <div id="enemyRow" class="enemy-row"></div>
-    </section>
+    <button id="backToBaseBtn" class="back-btn hidden" type="button"><i class="fa-solid fa-rotate-left"></i> 拠点へ戻る</button>
+    <div id="popupLayer" class="hidden"></div>
 
-    <section class="bottom">
+    <div id="battleUI" class="hidden">
+      <section class="middle">
+        <div id="log" class="log"></div>
+      </section>
+
+      <section class="top">
+        <div id="enemyRow" class="enemy-row"></div>
+      </section>
+
+      <section class="bottom">
       <div class="player-card" id="playerCard">
         <div class="line">
           <span class="name"><i class="fa-solid fa-user-ninja"></i> プレイヤー</span>
@@ -322,6 +406,7 @@
         <div class="auto-slot"><span><i class="fa-solid fa-2"></i> 自動2</span><span id="auto2">-</span></div>
       </div>
     </section>
+    </div>
   </main>
 
   <script>
@@ -335,10 +420,44 @@
       quick: { id: "quick", name: "速打", icon: "fa-solid fa-wind", useCp: 12, gainCp: 0, cooldown: 1.0, power: 1.15 }
     };
 
-    const state = {
-      running: true,
-      lastTs: 0,
-      player: {
+    const STAGES = [
+      {
+        id: "stage-1",
+        name: "草原の入口",
+        icon: "fa-solid fa-seedling",
+        recommendedPower: "推奨戦力 120",
+        enemies: [
+          { name: "スライム", hp: 150, atk: 22, def: 7, speed: 24 },
+          { name: "ゴブリン", hp: 180, atk: 26, def: 9, speed: 26 },
+          { name: "コボルト", hp: 210, atk: 30, def: 10, speed: 28 }
+        ]
+      },
+      {
+        id: "stage-2",
+        name: "古洞の奥地",
+        icon: "fa-solid fa-mountain",
+        recommendedPower: "推奨戦力 170",
+        enemies: [
+          { name: "洞窟バット", hp: 180, atk: 28, def: 10, speed: 30 },
+          { name: "岩トカゲ", hp: 230, atk: 32, def: 12, speed: 27 },
+          { name: "洞窟オーガ", hp: 280, atk: 36, def: 14, speed: 24 }
+        ]
+      },
+      {
+        id: "stage-3",
+        name: "遺跡中枢",
+        icon: "fa-solid fa-chess-rook",
+        recommendedPower: "推奨戦力 230",
+        enemies: [
+          { name: "遺跡兵", hp: 220, atk: 34, def: 13, speed: 30 },
+          { name: "呪術師", hp: 250, atk: 38, def: 12, speed: 32 },
+          { name: "守護ゴーレム", hp: 320, atk: 42, def: 17, speed: 25 }
+        ]
+      }
+    ];
+
+    function createPlayer() {
+      return {
         id: "player",
         name: "プレイヤー",
         hp: 420,
@@ -353,19 +472,32 @@
         autoSlots: ["basic", "heavy"],
         manualSlots: ["twin", "puncture", "guardBreak", "quick", "burst", "basic"],
         targetEnemyId: "enemy-1"
-      },
-      enemies: Array.from({ length: 3 }, (_, i) => ({
+      };
+    }
+
+    function createEnemiesFromStage(stageId) {
+      const stage = STAGES.find(s => s.id === stageId) || STAGES[0];
+      return stage.enemies.map((enemy, i) => ({
         id: `enemy-${i + 1}`,
-        name: `敵 ${i + 1}`,
-        hp: 160 + i * 30,
-        maxHp: 160 + i * 30,
-        atk: 24 + i * 4,
-        def: 8 + i * 2,
-        speed: 26 + i * 2,
+        name: enemy.name,
+        hp: enemy.hp,
+        maxHp: enemy.hp,
+        atk: enemy.atk,
+        def: enemy.def,
+        speed: enemy.speed,
         gauge: 0,
         cooldowns: {},
         alive: true
-      })),
+      }));
+    }
+
+    const state = {
+      screen: "base",
+      running: false,
+      lastTs: 0,
+      selectedStage: STAGES[0].id,
+      player: createPlayer(),
+      enemies: createEnemiesFromStage(STAGES[0].id),
       log: [],
       rewards: { exp: 0, gold: 0, drops: [] }
     };
@@ -384,12 +516,21 @@
     const targetButtonsEl = document.getElementById("targetButtons");
     const auto1El = document.getElementById("auto1");
     const auto2El = document.getElementById("auto2");
+    const baseScreenEl = document.getElementById("baseScreen");
+    const stageListEl = document.getElementById("stageList");
+    const battleUiEl = document.getElementById("battleUI");
+    const backToBaseBtn = document.getElementById("backToBaseBtn");
 
     function addLog(msg) {
       state.log.push(`<p>${msg}</p>`);
       state.log = state.log.slice(-50);
       logEl.innerHTML = state.log.join("");
       logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      state.log = [];
+      logEl.innerHTML = "";
     }
 
     function livingEnemies() {
@@ -527,8 +668,14 @@
       });
     }
 
+    function finishBattle(resultClass, message) {
+      state.running = false;
+      addLog(`<span class='${resultClass}'>${message}</span>`);
+      backToBaseBtn.classList.remove("hidden");
+    }
+
     function update(dt) {
-      if (!state.running) return;
+      if (!state.running || state.screen !== "battle") return;
 
       const p = state.player;
       if (p.hp > 0) {
@@ -555,11 +702,9 @@
       }
 
       if (state.player.hp <= 0) {
-        state.running = false;
-        addLog("<span class='defeat'>プレイヤーは力尽きた...</span>");
+        finishBattle("defeat", "プレイヤーは力尽きた...");
       } else if (livingEnemies().length === 0) {
-        state.running = false;
-        addLog("<span class='victory'>戦闘勝利！</span>");
+        finishBattle("victory", "戦闘勝利！");
       }
     }
 
@@ -599,7 +744,7 @@
           </article>
         `;
       }).join("");
-      aliveEnemyInfoEl.innerHTML = `<i class="fa-solid fa-users"></i> 敵 ${livingEnemies().length}/3`;
+      aliveEnemyInfoEl.innerHTML = `<i class="fa-solid fa-users"></i> 敵 ${livingEnemies().length}/${state.enemies.length}`;
     }
 
     function renderPlayer() {
@@ -632,7 +777,7 @@
 
       manualSkillsEl.querySelectorAll("button").forEach(btn => {
         btn.addEventListener("click", () => {
-          if (!state.running || state.player.hp <= 0) return;
+          if (!state.running || state.player.hp <= 0 || state.screen !== "battle") return;
           const id = btn.dataset.id;
           const skill = SKILLS[id];
           const cd = state.player.cooldowns[id] || 0;
@@ -652,11 +797,72 @@
       });
     }
 
-    function render() {
+    function renderBase() {
+      const stageButtons = STAGES.map(stage => {
+        const selected = state.selectedStage === stage.id;
+        return `
+          <button class="stage-btn ${selected ? "selected" : ""}" data-stage-id="${stage.id}" type="button">
+            <span><i class="${stage.icon}"></i> ${stage.name}</span>
+            <small>${stage.recommendedPower} / 敵数 ${stage.enemies.length}</small>
+          </button>
+        `;
+      }).join("");
+
+      stageListEl.innerHTML = stageButtons;
+      stageListEl.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const stageId = btn.dataset.stageId;
+          state.selectedStage = stageId;
+          startBattle(stageId);
+        });
+      });
+    }
+
+    function renderBattle() {
       renderEnemies();
       renderPlayer();
       renderTargets();
       renderManualSkills();
+    }
+
+    function renderScreen() {
+      const isBase = state.screen === "base";
+      baseScreenEl.classList.toggle("hidden", !isBase);
+      battleUiEl.classList.toggle("hidden", isBase);
+      popupLayerEl.classList.toggle("hidden", isBase);
+      if (isBase) {
+        backToBaseBtn.classList.add("hidden");
+        renderBase();
+      } else {
+        renderBattle();
+      }
+    }
+
+    function startBattle(stageId) {
+      const stage = STAGES.find(s => s.id === stageId) || STAGES[0];
+      state.screen = "battle";
+      state.running = true;
+      state.lastTs = 0;
+      state.player = createPlayer();
+      state.enemies = createEnemiesFromStage(stage.id);
+      state.player.targetEnemyId = state.enemies[0]?.id || "enemy-1";
+      state.rewards = { exp: 0, gold: 0, drops: [] };
+      clearLog();
+      backToBaseBtn.classList.add("hidden");
+      addLog(`<i class="${stage.icon}"></i> ${stage.name}に出撃`);
+      addLog("自動発動: 2枠目CPチェック→不足時1枠目");
+      renderScreen();
+    }
+
+    function returnToBase() {
+      state.screen = "base";
+      state.running = false;
+      state.lastTs = 0;
+      state.player = createPlayer();
+      state.enemies = createEnemiesFromStage(state.selectedStage);
+      state.rewards = { exp: 0, gold: 0, drops: [] };
+      clearLog();
+      renderScreen();
     }
 
     function loop(ts) {
@@ -664,20 +870,22 @@
       const dt = Math.min(0.033, (ts - state.lastTs) / 1000);
       state.lastTs = ts;
       update(dt);
-      renderEnemies();
-      renderPlayer();
-      renderManualSkills();
+      if (state.screen === "battle") {
+        renderEnemies();
+        renderPlayer();
+        renderManualSkills();
+      }
       requestAnimationFrame(loop);
     }
 
     function init() {
-      addLog("<i class='fa-solid fa-dragon'></i> 戦闘開始");
-      addLog("自動発動: 2枠目CPチェック→不足時1枠目");
-      render();
+      backToBaseBtn.addEventListener("click", returnToBase);
+      renderScreen();
       requestAnimationFrame(loop);
     }
 
     init();
   </script>
+
 </body>
 </html>

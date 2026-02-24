@@ -49,7 +49,7 @@
       border: 1px solid #2b3564;
       box-shadow: 0 12px 26px var(--shadow);
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: 1fr auto auto;
       overflow: hidden;
       position: relative;
     }
@@ -281,12 +281,12 @@
   <main class="app" id="app">
     <div id="popupLayer"></div>
 
-    <section class="top">
-      <div id="enemyRow" class="enemy-row"></div>
-    </section>
-
     <section class="middle">
       <div id="log" class="log"></div>
+    </section>
+
+    <section class="top">
+      <div id="enemyRow" class="enemy-row"></div>
     </section>
 
     <section class="bottom">
@@ -372,9 +372,10 @@
     const auto2El = document.getElementById("auto2");
 
     function addLog(msg) {
-      state.log.unshift(`<p>${msg}</p>`);
-      state.log = state.log.slice(0, 50);
+      state.log.push(`<p>${msg}</p>`);
+      state.log = state.log.slice(-50);
       logEl.innerHTML = state.log.join("");
+      logEl.scrollTop = logEl.scrollHeight;
     }
 
     function livingEnemies() {

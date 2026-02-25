@@ -514,19 +514,23 @@
                 <div class="grid grid-cols-2 gap-y-6 gap-x-4">
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">STR（筋力）</span>
-                        <span class="text-2xl font-black text-slate-700" id="status-atk">10</span>
+                        <span class="text-2xl font-black text-slate-700" id="status-atk">1</span>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">VIT（体力）</span>
-                        <span class="text-2xl font-black text-slate-700" id="status-def">5</span>
+                        <span class="text-2xl font-black text-slate-700" id="status-def">1</span>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">INT（知力）</span>
-                        <span class="text-2xl font-black text-blue-600" id="status-int">5</span>
+                        <span class="text-2xl font-black text-slate-700" id="status-int">1</span>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">DEX（器用）</span>
-                        <span class="text-2xl font-black text-green-600" id="status-dex">5</span>
+                        <span class="text-2xl font-black text-slate-700" id="status-dex">1</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">LUK（運）</span>
+                        <span class="text-2xl font-black text-slate-700" id="status-luk">1</span>
                     </div>
                 </div>
             </div>
@@ -1675,7 +1679,8 @@
                     { id: 'status-atk', key: PrimaryStatKey.STR },
                     { id: 'status-int', key: PrimaryStatKey.INT },
                     { id: 'status-def', key: PrimaryStatKey.VIT },
-                    { id: 'status-dex', key: PrimaryStatKey.DEX }
+                    { id: 'status-dex', key: PrimaryStatKey.DEX },
+                    { id: 'status-luk', key: PrimaryStatKey.LUK }
                 ];
                 primaryMainFieldDefinitions.forEach(({ id, key }) => {
                     const field = document.getElementById(id);
@@ -1770,7 +1775,7 @@
             const statValueIds = [
                 'player-hp-text', 'player-mp-text', 'player-exp-text-battle',
                 'enemy-hp-text', 'enemy-name',
-                'status-lvl', 'status-atk', 'status-def', 'status-int', 'status-dex',
+                'status-lvl', 'status-atk', 'status-def', 'status-int', 'status-dex', 'status-luk',
                 'status-exp', 'status-next',
                 'stat-max-hp', 'stat-max-mp', 'stat-atk-flat', 'stat-magic-atk',
                 'stat-def-flat', 'stat-hit', 'stat-crit', 'stat-dmg', 'stat-dr',

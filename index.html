@@ -535,9 +535,14 @@
             <div class="bg-slate-800 rounded-3xl p-6 text-white mb-6">
                 <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-tighter">二次ステータス</h3>
-                    <button id="secondary-info-btn" class="text-slate-400 hover:text-white transition-colors text-xs font-bold flex items-center gap-1">
-                        <i class="fas fa-circle-info"></i> Info
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button id="secondary-breakdown-btn" class="text-slate-400 hover:text-white transition-colors text-xs font-bold flex items-center gap-1">
+                            <i class="fas fa-list"></i> 詳細
+                        </button>
+                        <button id="secondary-info-btn" class="text-slate-400 hover:text-white transition-colors text-xs font-bold flex items-center gap-1">
+                            <i class="fas fa-circle-info"></i> Info
+                        </button>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 text-xs">
                     <div class="flex justify-between border-b border-slate-700 pb-1"><span>最大HP</span><span id="stat-max-hp">0</span></div>
@@ -1039,6 +1044,51 @@
         </div>
     </div>
 
+    <!-- STATUS BREAKDOWN MODAL -->
+    <div id="status-breakdown-modal" class="fixed inset-0 bg-slate-900/80 z-[110] hidden items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] overflow-x-hidden overflow-y-auto max-h-[calc(100dvh-3rem)] no-scrollbar shadow-2xl p-6 border-b-8 border-slate-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-black text-lg text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-list text-slate-500"></i> ステータス詳細
+                </h3>
+                <button id="status-breakdown-close" class="text-slate-400 hover:text-slate-700 text-lg"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="space-y-4 text-xs">
+                <div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase">Primary</div>
+                    <div class="mt-2 space-y-1 text-slate-700 font-bold">
+                        <div class="flex justify-between"><span>STR</span><span id="detail-primary-str">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>INT</span><span id="detail-primary-int">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>VIT</span><span id="detail-primary-vit">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>DEX</span><span id="detail-primary-dex">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>LUK</span><span id="detail-primary-luk">0(0+0)</span></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase">Secondary</div>
+                    <div class="mt-2 space-y-1 text-slate-700 font-bold">
+                        <div class="flex justify-between"><span>最大HP</span><span id="detail-stat-max-hp">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>最大MP</span><span id="detail-stat-max-mp">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>物理攻撃力</span><span id="detail-stat-atk-flat">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>魔法攻撃力</span><span id="detail-stat-magic-atk">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>防御力</span><span id="detail-stat-def-flat">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>命中</span><span id="detail-stat-hit">0(0+0)</span></div>
+                        <div class="flex justify-between"><span>回避</span><span id="detail-stat-eva">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>クリティカル率</span><span id="detail-stat-crit">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>追加ダメージ%</span><span id="detail-stat-dmg">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>追加防御%</span><span id="detail-stat-dr">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>ドロップ率補正</span><span id="detail-stat-drop">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>レアドロ率補正</span><span id="detail-stat-rare-drop">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>エンチャ成功補正</span><span id="detail-stat-enchant-success">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>ゴールド獲得量補正</span><span id="detail-stat-gold-gain">0(0+0)%</span></div>
+                        <div class="flex justify-between"><span>経験値獲得量補正</span><span id="detail-stat-exp-bonus">0(0+0)%</span></div>
+                    </div>
+                </div>
+            </div>
+            <button id="status-breakdown-close-bottom" class="mt-5 w-full bg-slate-800 text-white font-black py-3 rounded-2xl shadow-lg">閉じる</button>
+        </div>
+    </div>
+
     <!-- STATUS INFO MODAL -->
     <div id="status-info-modal" class="fixed inset-0 bg-slate-900/80 z-[110] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2rem] overflow-x-hidden overflow-y-auto max-h-[calc(100dvh-3rem)] no-scrollbar shadow-2xl p-6 border-b-8 border-slate-200">
@@ -1210,30 +1260,183 @@
             });
 
             const createSecondaryStats = (stats = {}) => {
-                const pickFlat = (key) => (Number.isFinite(stats[key]) ? Math.max(0, Number(stats[key])) : 0);
-                const pickRate = (key, min = 0, max = 1) => {
+                const pickNonNegative = (key) => {
                     const value = Number.isFinite(stats[key]) ? Number(stats[key]) : 0;
-                    return Math.min(max, Math.max(min, value));
+                    return Math.max(0, value);
                 };
 
                 return {
-                    [SecondaryStatKey.MaxHP]: pickFlat(SecondaryStatKey.MaxHP),
-                    [SecondaryStatKey.MaxMP]: pickFlat(SecondaryStatKey.MaxMP),
-                    [SecondaryStatKey.PhysicalAttack]: pickFlat(SecondaryStatKey.PhysicalAttack),
-                    [SecondaryStatKey.MagicAttack]: pickFlat(SecondaryStatKey.MagicAttack),
-                    [SecondaryStatKey.Defense]: pickFlat(SecondaryStatKey.Defense),
-                    [SecondaryStatKey.HitRate]: pickFlat(SecondaryStatKey.HitRate),
-                    [SecondaryStatKey.AvoidRate]: pickRate(SecondaryStatKey.AvoidRate, 0, 0.95),
-                    [SecondaryStatKey.CriticalChance]: pickRate(SecondaryStatKey.CriticalChance),
-                    [SecondaryStatKey.BonusDamagePercent]: pickRate(SecondaryStatKey.BonusDamagePercent, -0.99, 10),
-                    [SecondaryStatKey.BonusDefensePercent]: pickRate(SecondaryStatKey.BonusDefensePercent, -0.99, 10),
-                    [SecondaryStatKey.DropRateBonus]: pickRate(SecondaryStatKey.DropRateBonus, -0.99, 10),
-                    [SecondaryStatKey.RareDropRateBonus]: pickRate(SecondaryStatKey.RareDropRateBonus, -0.99, 10),
-                    [SecondaryStatKey.EnchantSuccessRateBonus]: pickRate(SecondaryStatKey.EnchantSuccessRateBonus, -0.99, 10),
-                    [SecondaryStatKey.GoldGainRate]: pickRate(SecondaryStatKey.GoldGainRate, -0.99, 10),
-                    [SecondaryStatKey.ExpGainRate]: pickRate(SecondaryStatKey.ExpGainRate, -0.99, 10)
+                    [SecondaryStatKey.MaxHP]: Math.max(1, Math.floor(pickNonNegative(SecondaryStatKey.MaxHP))),
+                    [SecondaryStatKey.MaxMP]: Math.floor(pickNonNegative(SecondaryStatKey.MaxMP)),
+                    [SecondaryStatKey.PhysicalAttack]: Math.floor(pickNonNegative(SecondaryStatKey.PhysicalAttack)),
+                    [SecondaryStatKey.MagicAttack]: Math.floor(pickNonNegative(SecondaryStatKey.MagicAttack)),
+                    [SecondaryStatKey.Defense]: Math.floor(pickNonNegative(SecondaryStatKey.Defense)),
+                    [SecondaryStatKey.HitRate]: pickNonNegative(SecondaryStatKey.HitRate),
+                    [SecondaryStatKey.AvoidRate]: pickNonNegative(SecondaryStatKey.AvoidRate),
+                    [SecondaryStatKey.CriticalChance]: pickNonNegative(SecondaryStatKey.CriticalChance),
+                    [SecondaryStatKey.BonusDamagePercent]: pickNonNegative(SecondaryStatKey.BonusDamagePercent),
+                    [SecondaryStatKey.BonusDefensePercent]: pickNonNegative(SecondaryStatKey.BonusDefensePercent),
+                    [SecondaryStatKey.DropRateBonus]: pickNonNegative(SecondaryStatKey.DropRateBonus),
+                    [SecondaryStatKey.RareDropRateBonus]: pickNonNegative(SecondaryStatKey.RareDropRateBonus),
+                    [SecondaryStatKey.EnchantSuccessRateBonus]: pickNonNegative(SecondaryStatKey.EnchantSuccessRateBonus),
+                    [SecondaryStatKey.GoldGainRate]: pickNonNegative(SecondaryStatKey.GoldGainRate),
+                    [SecondaryStatKey.ExpGainRate]: pickNonNegative(SecondaryStatKey.ExpGainRate)
                 };
             };
+
+            const DEFAULT_BASE_STAT_CONFIG = Object.freeze({
+                BaseHP: 100,
+                BaseMP: 30,
+                BasePAtk: 10,
+                BaseMAtk: 16,
+                BaseDef: 5,
+                BaseHit: 90,
+                BaseAvoid: 3,
+                BaseCrit: 5
+            });
+
+            const DEFAULT_PRIMARY_STATS = Object.freeze({
+                [PrimaryStatKey.STR]: 10,
+                [PrimaryStatKey.INT]: 5,
+                [PrimaryStatKey.VIT]: 5,
+                [PrimaryStatKey.DEX]: 5,
+                [PrimaryStatKey.LUK]: 5
+            });
+
+            class PlayerStatusCalculator {
+                static calculateSecondaryStats({
+                    primaryStats,
+                    baseStatConfig = DEFAULT_BASE_STAT_CONFIG,
+                    bonusStats = {},
+                    roundingMode = Math.floor
+                }) {
+                    const primary = createPrimaryStats(primaryStats);
+                    const baseConfig = PlayerStatusCalculator.#createBaseConfig(baseStatConfig);
+                    const bonus = PlayerStatusCalculator.#createBonusStats(bonusStats);
+                    const primaryBonus = {
+                        [PrimaryStatKey.STR]: bonus[PrimaryStatKey.STR],
+                        [PrimaryStatKey.INT]: bonus[PrimaryStatKey.INT],
+                        [PrimaryStatKey.VIT]: bonus[PrimaryStatKey.VIT],
+                        [PrimaryStatKey.DEX]: bonus[PrimaryStatKey.DEX],
+                        [PrimaryStatKey.LUK]: bonus[PrimaryStatKey.LUK]
+                    };
+                    const totalPrimary = {
+                        [PrimaryStatKey.STR]: primary[PrimaryStatKey.STR] + primaryBonus[PrimaryStatKey.STR],
+                        [PrimaryStatKey.INT]: primary[PrimaryStatKey.INT] + primaryBonus[PrimaryStatKey.INT],
+                        [PrimaryStatKey.VIT]: primary[PrimaryStatKey.VIT] + primaryBonus[PrimaryStatKey.VIT],
+                        [PrimaryStatKey.DEX]: primary[PrimaryStatKey.DEX] + primaryBonus[PrimaryStatKey.DEX],
+                        [PrimaryStatKey.LUK]: primary[PrimaryStatKey.LUK] + primaryBonus[PrimaryStatKey.LUK]
+                    };
+
+                    const baseValues = {
+                        [SecondaryStatKey.MaxHP]: baseConfig.BaseHP + totalPrimary.VIT * 12,
+                        [SecondaryStatKey.MaxMP]: baseConfig.BaseMP + totalPrimary.INT * 10,
+                        [SecondaryStatKey.PhysicalAttack]: baseConfig.BasePAtk + totalPrimary.STR * 3,
+                        [SecondaryStatKey.MagicAttack]: baseConfig.BaseMAtk + totalPrimary.INT * 3,
+                        DefenseBase: baseConfig.BaseDef + totalPrimary.VIT * 2,
+                        [SecondaryStatKey.HitRate]: baseConfig.BaseHit + totalPrimary.DEX * 0.15,
+                        [SecondaryStatKey.AvoidRate]: baseConfig.BaseAvoid + totalPrimary.DEX * 0.08,
+                        [SecondaryStatKey.CriticalChance]: baseConfig.BaseCrit + totalPrimary.DEX * 0.05 + totalPrimary.LUK * 0.10,
+                        [SecondaryStatKey.DropRateBonus]: totalPrimary.LUK * 0.20,
+                        [SecondaryStatKey.RareDropRateBonus]: totalPrimary.LUK * 0.05,
+                        [SecondaryStatKey.EnchantSuccessRateBonus]: totalPrimary.LUK * 0.03,
+                        [SecondaryStatKey.GoldGainRate]: totalPrimary.LUK * 0.05,
+                        [SecondaryStatKey.ExpGainRate]: totalPrimary.LUK * 0.03,
+                        [SecondaryStatKey.BonusDamagePercent]: bonus[SecondaryStatKey.BonusDamagePercent],
+                        [SecondaryStatKey.BonusDefensePercent]: bonus[SecondaryStatKey.BonusDefensePercent]
+                    };
+
+                    const totalValues = {
+                        [SecondaryStatKey.MaxHP]: Math.max(1, roundingMode(baseValues[SecondaryStatKey.MaxHP] + bonus[SecondaryStatKey.MaxHP])),
+                        [SecondaryStatKey.MaxMP]: Math.max(0, roundingMode(baseValues[SecondaryStatKey.MaxMP] + bonus[SecondaryStatKey.MaxMP])),
+                        [SecondaryStatKey.PhysicalAttack]: Math.max(0, roundingMode(baseValues[SecondaryStatKey.PhysicalAttack] + bonus[SecondaryStatKey.PhysicalAttack])),
+                        [SecondaryStatKey.MagicAttack]: Math.max(0, roundingMode(baseValues[SecondaryStatKey.MagicAttack] + bonus[SecondaryStatKey.MagicAttack])),
+                        DefenseBase: Math.max(0, roundingMode(baseValues.DefenseBase + bonus.DefenseBase)),
+                        [SecondaryStatKey.HitRate]: Math.max(0, baseValues[SecondaryStatKey.HitRate] + bonus[SecondaryStatKey.HitRate]),
+                        [SecondaryStatKey.AvoidRate]: Math.max(0, baseValues[SecondaryStatKey.AvoidRate] + bonus[SecondaryStatKey.AvoidRate]),
+                        [SecondaryStatKey.CriticalChance]: Math.max(0, baseValues[SecondaryStatKey.CriticalChance] + bonus[SecondaryStatKey.CriticalChance]),
+                        [SecondaryStatKey.BonusDamagePercent]: Math.max(0, baseValues[SecondaryStatKey.BonusDamagePercent]),
+                        [SecondaryStatKey.BonusDefensePercent]: Math.max(0, baseValues[SecondaryStatKey.BonusDefensePercent]),
+                        [SecondaryStatKey.DropRateBonus]: Math.max(0, baseValues[SecondaryStatKey.DropRateBonus] + bonus[SecondaryStatKey.DropRateBonus]),
+                        [SecondaryStatKey.RareDropRateBonus]: Math.max(0, baseValues[SecondaryStatKey.RareDropRateBonus] + bonus[SecondaryStatKey.RareDropRateBonus]),
+                        [SecondaryStatKey.EnchantSuccessRateBonus]: Math.max(0, baseValues[SecondaryStatKey.EnchantSuccessRateBonus] + bonus[SecondaryStatKey.EnchantSuccessRateBonus]),
+                        [SecondaryStatKey.GoldGainRate]: Math.max(0, baseValues[SecondaryStatKey.GoldGainRate] + bonus[SecondaryStatKey.GoldGainRate]),
+                        [SecondaryStatKey.ExpGainRate]: Math.max(0, baseValues[SecondaryStatKey.ExpGainRate] + bonus[SecondaryStatKey.ExpGainRate])
+                    };
+
+                    const totalBonusDefensePercent = totalValues[SecondaryStatKey.BonusDefensePercent];
+                    const defense = Math.max(0, roundingMode(totalValues.DefenseBase * (1 + totalBonusDefensePercent / 100)));
+
+                    const secondaryStats = createSecondaryStats({
+                        [SecondaryStatKey.MaxHP]: totalValues[SecondaryStatKey.MaxHP],
+                        [SecondaryStatKey.MaxMP]: totalValues[SecondaryStatKey.MaxMP],
+                        [SecondaryStatKey.PhysicalAttack]: totalValues[SecondaryStatKey.PhysicalAttack],
+                        [SecondaryStatKey.MagicAttack]: totalValues[SecondaryStatKey.MagicAttack],
+                        [SecondaryStatKey.Defense]: defense,
+                        [SecondaryStatKey.HitRate]: totalValues[SecondaryStatKey.HitRate],
+                        [SecondaryStatKey.AvoidRate]: totalValues[SecondaryStatKey.AvoidRate],
+                        [SecondaryStatKey.CriticalChance]: totalValues[SecondaryStatKey.CriticalChance],
+                        [SecondaryStatKey.BonusDamagePercent]: totalValues[SecondaryStatKey.BonusDamagePercent],
+                        [SecondaryStatKey.BonusDefensePercent]: totalValues[SecondaryStatKey.BonusDefensePercent],
+                        [SecondaryStatKey.DropRateBonus]: totalValues[SecondaryStatKey.DropRateBonus],
+                        [SecondaryStatKey.RareDropRateBonus]: totalValues[SecondaryStatKey.RareDropRateBonus],
+                        [SecondaryStatKey.EnchantSuccessRateBonus]: totalValues[SecondaryStatKey.EnchantSuccessRateBonus],
+                        [SecondaryStatKey.GoldGainRate]: totalValues[SecondaryStatKey.GoldGainRate],
+                        [SecondaryStatKey.ExpGainRate]: totalValues[SecondaryStatKey.ExpGainRate]
+                    });
+
+                    return {
+                        primaryStats: primary,
+                        primaryBonus,
+                        totalPrimary,
+                        baseStatConfig: baseConfig,
+                        baseValues,
+                        bonusValues: bonus,
+                        totalValues,
+                        secondaryStats,
+                        defense
+                    };
+                }
+
+                static #createBaseConfig(baseStatConfig = {}) {
+                    return {
+                        BaseHP: Number.isFinite(baseStatConfig.BaseHP) ? baseStatConfig.BaseHP : DEFAULT_BASE_STAT_CONFIG.BaseHP,
+                        BaseMP: Number.isFinite(baseStatConfig.BaseMP) ? baseStatConfig.BaseMP : DEFAULT_BASE_STAT_CONFIG.BaseMP,
+                        BasePAtk: Number.isFinite(baseStatConfig.BasePAtk) ? baseStatConfig.BasePAtk : DEFAULT_BASE_STAT_CONFIG.BasePAtk,
+                        BaseMAtk: Number.isFinite(baseStatConfig.BaseMAtk) ? baseStatConfig.BaseMAtk : DEFAULT_BASE_STAT_CONFIG.BaseMAtk,
+                        BaseDef: Number.isFinite(baseStatConfig.BaseDef) ? baseStatConfig.BaseDef : DEFAULT_BASE_STAT_CONFIG.BaseDef,
+                        BaseHit: Number.isFinite(baseStatConfig.BaseHit) ? baseStatConfig.BaseHit : DEFAULT_BASE_STAT_CONFIG.BaseHit,
+                        BaseAvoid: Number.isFinite(baseStatConfig.BaseAvoid) ? baseStatConfig.BaseAvoid : DEFAULT_BASE_STAT_CONFIG.BaseAvoid,
+                        BaseCrit: Number.isFinite(baseStatConfig.BaseCrit) ? baseStatConfig.BaseCrit : DEFAULT_BASE_STAT_CONFIG.BaseCrit
+                    };
+                }
+
+                static #createBonusStats(bonusStats = {}) {
+                    const asNonNegative = (value) => (Number.isFinite(value) ? Math.max(0, Number(value)) : 0);
+                    return {
+                        [SecondaryStatKey.MaxHP]: asNonNegative(bonusStats[SecondaryStatKey.MaxHP]),
+                        [SecondaryStatKey.MaxMP]: asNonNegative(bonusStats[SecondaryStatKey.MaxMP]),
+                        [SecondaryStatKey.PhysicalAttack]: asNonNegative(bonusStats[SecondaryStatKey.PhysicalAttack]),
+                        [SecondaryStatKey.MagicAttack]: asNonNegative(bonusStats[SecondaryStatKey.MagicAttack]),
+                        DefenseBase: asNonNegative(bonusStats.DefenseBase),
+                        [SecondaryStatKey.HitRate]: asNonNegative(bonusStats[SecondaryStatKey.HitRate]),
+                        [SecondaryStatKey.AvoidRate]: asNonNegative(bonusStats[SecondaryStatKey.AvoidRate]),
+                        [SecondaryStatKey.CriticalChance]: asNonNegative(bonusStats[SecondaryStatKey.CriticalChance]),
+                        [SecondaryStatKey.BonusDamagePercent]: asNonNegative(bonusStats[SecondaryStatKey.BonusDamagePercent]),
+                        [SecondaryStatKey.BonusDefensePercent]: asNonNegative(bonusStats[SecondaryStatKey.BonusDefensePercent]),
+                        [SecondaryStatKey.DropRateBonus]: asNonNegative(bonusStats[SecondaryStatKey.DropRateBonus]),
+                        [SecondaryStatKey.RareDropRateBonus]: asNonNegative(bonusStats[SecondaryStatKey.RareDropRateBonus]),
+                        [SecondaryStatKey.EnchantSuccessRateBonus]: asNonNegative(bonusStats[SecondaryStatKey.EnchantSuccessRateBonus]),
+                        [SecondaryStatKey.GoldGainRate]: asNonNegative(bonusStats[SecondaryStatKey.GoldGainRate]),
+                        [SecondaryStatKey.ExpGainRate]: asNonNegative(bonusStats[SecondaryStatKey.ExpGainRate]),
+                        [PrimaryStatKey.STR]: asNonNegative(bonusStats[PrimaryStatKey.STR]),
+                        [PrimaryStatKey.INT]: asNonNegative(bonusStats[PrimaryStatKey.INT]),
+                        [PrimaryStatKey.VIT]: asNonNegative(bonusStats[PrimaryStatKey.VIT]),
+                        [PrimaryStatKey.DEX]: asNonNegative(bonusStats[PrimaryStatKey.DEX]),
+                        [PrimaryStatKey.LUK]: asNonNegative(bonusStats[PrimaryStatKey.LUK])
+                    };
+                }
+            }
 
             const formatStatBreakdown = ({ total = 0, base = 0, bonus = 0, digits = 0, suffix = '' } = {}) => {
                 const toSafeNumber = (value) => (Number.isFinite(value) ? Number(value) : 0);
@@ -1255,10 +1458,13 @@
                     const bonusHitDamageScaleTable = Array.isArray(attackDefinition.bonusHitDamageScaleTable) ? attackDefinition.bonusHitDamageScaleTable : [];
 
                     const hitSequence = [];
+                    const damageType = attackDefinition.damageType || 'Physical';
+
                     for (let i = 0; i < guaranteedHits; i += 1) {
                         hitSequence.push({
                             hitSourceType: HitSourceType.Guaranteed,
                             isGuaranteedHit: true,
+                            damageType,
                             damageScale: 1,
                             bonusSlotIndex: null,
                             onHitEffectScale: 1
@@ -1271,6 +1477,7 @@
                             hitSequence.push({
                                 hitSourceType: HitSourceType.Bonus,
                                 isGuaranteedHit: false,
+                                damageType,
                                 damageScale: HitSequenceResolver.#pickTableValue(bonusHitDamageScaleTable, i, 0),
                                 bonusSlotIndex: i,
                                 onHitEffectScale: {
@@ -1339,9 +1546,12 @@
                     rng
                 });
 
-                const rollCriticalBySecondary = ({ rng: random }) => {
+                const rollCriticalBySecondary = ({ hit, rng: random }) => {
+                    if (hit.damageType === 'Magical') {
+                        return false;
+                    }
                     const criticalChance = attackerSecondary.CriticalChance;
-                    return random() < criticalChance;
+                    return random() < (criticalChance / 100);
                 };
 
                 const resolveCritical = typeof rollCritical === 'function'
@@ -1384,14 +1594,120 @@
                 SecondaryStatKey,
                 HitSourceType,
                 CritTier,
+                DEFAULT_BASE_STAT_CONFIG,
+                DEFAULT_PRIMARY_STATS,
                 createPrimaryStats,
                 createSecondaryStats,
                 formatStatBreakdown,
+                PlayerStatusCalculator,
                 HitSequenceResolver,
                 CriticalResolver,
                 resolveHitResults,
                 NORMAL_ATTACK_HIT_DEFINITION
             });
+
+            const renderDerivedSecondaryStats = ({
+                primaryStats = DEFAULT_PRIMARY_STATS,
+                bonusStats = {}
+            } = {}) => {
+                const result = PlayerStatusCalculator.calculateSecondaryStats({ primaryStats, bonusStats });
+                const { baseValues, bonusValues, totalValues, secondaryStats, primaryStats: basePrimary, primaryBonus, totalPrimary } = result;
+
+                const primaryMainFieldDefinitions = [
+                    { id: 'status-atk', key: PrimaryStatKey.STR },
+                    { id: 'status-int', key: PrimaryStatKey.INT },
+                    { id: 'status-def', key: PrimaryStatKey.VIT },
+                    { id: 'status-dex', key: PrimaryStatKey.DEX }
+                ];
+                primaryMainFieldDefinitions.forEach(({ id, key }) => {
+                    const field = document.getElementById(id);
+                    if (field) {
+                        field.innerText = Math.floor(totalPrimary[key] || 0);
+                    }
+                });
+
+                const secondaryMainFieldDefinitions = [
+                    { id: 'stat-max-hp', key: SecondaryStatKey.MaxHP, isPercent: false },
+                    { id: 'stat-max-mp', key: SecondaryStatKey.MaxMP, isPercent: false },
+                    { id: 'stat-atk-flat', key: SecondaryStatKey.PhysicalAttack, isPercent: false },
+                    { id: 'stat-magic-atk', key: SecondaryStatKey.MagicAttack, isPercent: false },
+                    { id: 'stat-def-flat', key: SecondaryStatKey.Defense, isPercent: false },
+                    { id: 'stat-hit', key: SecondaryStatKey.HitRate, isPercent: false, digits: 1 },
+                    { id: 'stat-eva', key: SecondaryStatKey.AvoidRate, isPercent: true, digits: 2 },
+                    { id: 'stat-crit', key: SecondaryStatKey.CriticalChance, isPercent: true, digits: 2 },
+                    { id: 'stat-dmg', key: SecondaryStatKey.BonusDamagePercent, isPercent: true, digits: 2 },
+                    { id: 'stat-dr', key: SecondaryStatKey.BonusDefensePercent, isPercent: true, digits: 2 },
+                    { id: 'stat-drop', key: SecondaryStatKey.DropRateBonus, isPercent: true, digits: 2 },
+                    { id: 'stat-rare-drop', key: SecondaryStatKey.RareDropRateBonus, isPercent: true, digits: 2 },
+                    { id: 'stat-enchant-success', key: SecondaryStatKey.EnchantSuccessRateBonus, isPercent: true, digits: 2 },
+                    { id: 'stat-gold-gain', key: SecondaryStatKey.GoldGainRate, isPercent: true, digits: 2 },
+                    { id: 'stat-exp-bonus', key: SecondaryStatKey.ExpGainRate, isPercent: true, digits: 2 }
+                ];
+                secondaryMainFieldDefinitions.forEach(({ id, key, isPercent, digits = 0 }) => {
+                    const field = document.getElementById(id);
+                    if (!field) {
+                        return;
+                    }
+                    const totalValue = key === SecondaryStatKey.Defense ? secondaryStats[SecondaryStatKey.Defense] : totalValues[key] || 0;
+                    field.innerText = digits > 0 ? Number(totalValue).toFixed(digits) : String(Math.floor(totalValue));
+                    if (isPercent) {
+                        field.innerText += '%';
+                    }
+                });
+
+                const detailPrimaryDefinitions = [
+                    { id: 'detail-primary-str', key: PrimaryStatKey.STR },
+                    { id: 'detail-primary-int', key: PrimaryStatKey.INT },
+                    { id: 'detail-primary-vit', key: PrimaryStatKey.VIT },
+                    { id: 'detail-primary-dex', key: PrimaryStatKey.DEX },
+                    { id: 'detail-primary-luk', key: PrimaryStatKey.LUK }
+                ];
+                detailPrimaryDefinitions.forEach(({ id, key }) => {
+                    const field = document.getElementById(id);
+                    if (!field) {
+                        return;
+                    }
+                    field.innerText = formatStatBreakdown({
+                        total: totalPrimary[key] || 0,
+                        base: basePrimary[key] || 0,
+                        bonus: primaryBonus[key] || 0
+                    });
+                });
+
+                const detailSecondaryDefinitions = [
+                    { id: 'detail-stat-max-hp', key: SecondaryStatKey.MaxHP, isPercent: false },
+                    { id: 'detail-stat-max-mp', key: SecondaryStatKey.MaxMP, isPercent: false },
+                    { id: 'detail-stat-atk-flat', key: SecondaryStatKey.PhysicalAttack, isPercent: false },
+                    { id: 'detail-stat-magic-atk', key: SecondaryStatKey.MagicAttack, isPercent: false },
+                    { id: 'detail-stat-def-flat', key: SecondaryStatKey.Defense, isPercent: false, baseKey: 'DefenseBase', bonusKey: 'DefenseBase' },
+                    { id: 'detail-stat-hit', key: SecondaryStatKey.HitRate, isPercent: false, digits: 1 },
+                    { id: 'detail-stat-eva', key: SecondaryStatKey.AvoidRate, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-crit', key: SecondaryStatKey.CriticalChance, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-dmg', key: SecondaryStatKey.BonusDamagePercent, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-dr', key: SecondaryStatKey.BonusDefensePercent, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-drop', key: SecondaryStatKey.DropRateBonus, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-rare-drop', key: SecondaryStatKey.RareDropRateBonus, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-enchant-success', key: SecondaryStatKey.EnchantSuccessRateBonus, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-gold-gain', key: SecondaryStatKey.GoldGainRate, isPercent: true, digits: 2 },
+                    { id: 'detail-stat-exp-bonus', key: SecondaryStatKey.ExpGainRate, isPercent: true, digits: 2 }
+                ];
+                detailSecondaryDefinitions.forEach(({ id, key, isPercent, digits = 0, baseKey, bonusKey }) => {
+                    const field = document.getElementById(id);
+                    if (!field) {
+                        return;
+                    }
+                    const baseValue = baseValues[baseKey || key] || 0;
+                    const bonusValue = bonusValues[bonusKey || key] || 0;
+                    const totalValue = key === SecondaryStatKey.Defense ? secondaryStats[SecondaryStatKey.Defense] : totalValues[key] || 0;
+                    field.innerText = formatStatBreakdown({
+                        total: totalValue,
+                        base: baseValue,
+                        bonus: bonusValue,
+                        digits,
+                        suffix: isPercent ? '%' : ''
+                    });
+                });
+            };
 
             const statValueIds = [
                 'player-hp-text', 'player-mp-text', 'player-exp-text-battle',
@@ -1412,19 +1728,33 @@
                     }
                 });
 
-                const breakdownStatIds = ['stat-max-hp', 'stat-max-mp', 'stat-atk-flat', 'stat-magic-atk', 'stat-def-flat', 'stat-hit'];
-                breakdownStatIds.forEach((id) => {
+                const plainStatIds = ['stat-max-hp', 'stat-max-mp', 'stat-atk-flat', 'stat-magic-atk', 'stat-def-flat', 'stat-hit'];
+                plainStatIds.forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) {
-                        el.innerText = formatStatBreakdown({ total: 0, base: 0, bonus: 0 });
+                        el.innerText = '0';
                     }
                 });
 
-                const breakdownPercentStatIds = ['stat-crit', 'stat-dmg', 'stat-dr', 'stat-eva', 'stat-exp-bonus', 'stat-drop', 'stat-rare-drop', 'stat-enchant-success', 'stat-gold-gain'];
-                breakdownPercentStatIds.forEach((id) => {
+                const percentStatIds = ['stat-crit', 'stat-dmg', 'stat-dr', 'stat-eva', 'stat-exp-bonus', 'stat-drop', 'stat-rare-drop', 'stat-enchant-success', 'stat-gold-gain'];
+                percentStatIds.forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) {
-                        el.innerText = formatStatBreakdown({ total: 0, base: 0, bonus: 0, suffix: '%' });
+                        el.innerText = '0%';
+                    }
+                });
+
+                const detailIds = [
+                    'detail-primary-str', 'detail-primary-int', 'detail-primary-vit', 'detail-primary-dex', 'detail-primary-luk',
+                    'detail-stat-max-hp', 'detail-stat-max-mp', 'detail-stat-atk-flat', 'detail-stat-magic-atk', 'detail-stat-def-flat',
+                    'detail-stat-hit', 'detail-stat-eva', 'detail-stat-crit', 'detail-stat-dmg', 'detail-stat-dr',
+                    'detail-stat-drop', 'detail-stat-rare-drop', 'detail-stat-enchant-success', 'detail-stat-gold-gain', 'detail-stat-exp-bonus'
+                ];
+                detailIds.forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        const isPercentDetail = ['detail-stat-eva', 'detail-stat-crit', 'detail-stat-dmg', 'detail-stat-dr', 'detail-stat-drop', 'detail-stat-rare-drop', 'detail-stat-enchant-success', 'detail-stat-gold-gain', 'detail-stat-exp-bonus'].includes(id);
+                        el.innerText = isPercentDetail ? '0(0+0)%' : '0(0+0)';
                     }
                 });
 
@@ -1439,6 +1769,37 @@
                 });
             };
 
+            const runSecondaryStatSelfTests = () => {
+                const testResult = PlayerStatusCalculator.calculateSecondaryStats({
+                    primaryStats: {
+                        [PrimaryStatKey.STR]: 10,
+                        [PrimaryStatKey.INT]: 10,
+                        [PrimaryStatKey.VIT]: 10,
+                        [PrimaryStatKey.DEX]: 10,
+                        [PrimaryStatKey.LUK]: 10
+                    },
+                    bonusStats: {
+                        [SecondaryStatKey.BonusDefensePercent]: 20
+                    }
+                });
+
+                const checks = [
+                    { ok: testResult.totalValues[SecondaryStatKey.MaxHP] === 220, message: 'MaxHP式' },
+                    { ok: testResult.totalValues[SecondaryStatKey.MaxMP] === 130, message: 'MaxMP式' },
+                    { ok: testResult.totalValues[SecondaryStatKey.PhysicalAttack] === 40, message: 'PhysicalAttack式' },
+                    { ok: testResult.totalValues[SecondaryStatKey.MagicAttack] === 46, message: 'MagicAttack式' },
+                    { ok: testResult.totalValues.DefenseBase === 25, message: 'DefenseBase式' },
+                    { ok: testResult.secondaryStats[SecondaryStatKey.Defense] === 30, message: 'BonusDefensePercent適用' },
+                    { ok: Math.abs(testResult.totalValues[SecondaryStatKey.CriticalChance] - 6.5) < 1e-9, message: 'CriticalChance式' },
+                    { ok: Math.abs(testResult.totalValues[SecondaryStatKey.DropRateBonus] - 2.0) < 1e-9, message: 'DropRateBonus式' }
+                ];
+
+                const failed = checks.find((check) => !check.ok);
+                if (failed) {
+                    throw new Error(`SecondaryStatSelfTest failed: ${failed.message}`);
+                }
+            };
+
             const noop = (event) => {
                 if (event) {
                     event.preventDefault();
@@ -1447,14 +1808,47 @@
                 return false;
             };
 
-            window.switchPage = noop;
+            const switchPage = (pageName) => {
+                document.querySelectorAll('.page').forEach((page) => page.classList.remove('active'));
+                const targetPage = document.getElementById(`page-${pageName}`);
+                if (targetPage) {
+                    targetPage.classList.add('active');
+                }
+
+                ['battle', 'status', 'skill', 'inventory', 'log'].forEach((name) => {
+                    const nav = document.getElementById(`nav-${name}`);
+                    if (nav) {
+                        nav.classList.toggle('active', name === pageName);
+                    }
+                });
+            };
+
+            const openStatusBreakdownModal = () => {
+                const modal = document.getElementById('status-breakdown-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const closeStatusBreakdownModal = () => {
+                const modal = document.getElementById('status-breakdown-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+
+            window.switchPage = switchPage;
             window.toggleBottomMenu = noop;
             window.closeBottomMenu = noop;
-            window.openBottomMenuHelp = noop;
-            window.openBottomMenuSave = noop;
+            window.openBottomMenuHelp = () => switchPage('help');
+            window.openBottomMenuSave = () => switchPage('save');
             window.openBottomMenuDonate = noop;
             window.openBottomMenuTweet = noop;
-            window.openBottomMenuFeedback = noop;
+            window.openBottomMenuFeedback = () => switchPage('feedback');
             window.openDonateModal = noop;
             window.closeDonateModal = noop;
             window.purchaseTip = noop;
@@ -1468,6 +1862,36 @@
                 }
 
                 setDashValues();
+                runSecondaryStatSelfTests();
+                renderDerivedSecondaryStats();
+                switchPage('status');
+
+                const secondaryBreakdownBtn = document.getElementById('secondary-breakdown-btn');
+                if (secondaryBreakdownBtn) {
+                    secondaryBreakdownBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        openStatusBreakdownModal();
+                    });
+                }
+
+                ['status-breakdown-close', 'status-breakdown-close-bottom'].forEach((id) => {
+                    const closeButton = document.getElementById(id);
+                    if (closeButton) {
+                        closeButton.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            closeStatusBreakdownModal();
+                        });
+                    }
+                });
+
+                const statusBreakdownModal = document.getElementById('status-breakdown-modal');
+                if (statusBreakdownModal) {
+                    statusBreakdownModal.addEventListener('click', (event) => {
+                        if (event.target === statusBreakdownModal) {
+                            closeStatusBreakdownModal();
+                        }
+                    });
+                }
 
                 const overlay = document.getElementById('boot-overlay');
                 if (overlay) overlay.style.display = 'none';

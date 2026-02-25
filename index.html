@@ -116,7 +116,6 @@
         }
 
         nav button.active { color: #0f172a; border-top: 3px solid #0f172a; background-color: #fff; }
-        .job-tab.active { background-color: #0f172a; color: white; }
         .type-tab.active { border-bottom: 3px solid #0f172a; color: #0f172a; font-weight: bold; }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -294,7 +293,6 @@
                     <div id="enemy-hp-bar" class="bar-fill hp-fill"></div>
                     <div class="bar-text">HP: <span id="enemy-hp-text">30/30</span></div>
                 </div>
-                <div id="enemy-status-effects" class="flex flex-wrap justify-center gap-1 mt-1 text-[10px]"></div>
             </div>
                 <div id="damage-layer" class="absolute inset-0 pointer-events-none"></div>
                 <div class="absolute left-0 bottom-4 w-1/2 drop-log-box pointer-events-none text-left pl-2 text-slate-500 italic">
@@ -329,15 +327,8 @@
                         <div id="player-exp-bar-battle" class="bar-fill exp-fill"></div>
                         <div class="bar-text">EXP: <span id="player-exp-text-battle">0/100</span></div>
                     </div>
-                    <div>
-                        <div id="player-status-effects" class="flex flex-wrap gap-1 mt-1 text-[10px] h-[21.5px]"></div>
-                    </div>
                 </div>
 
-                <div class="space-y-2">
-                    <div id="battle-skill-slots"></div>
-                </div>
-                <div id="battle-potion-slots" class="grid grid-cols-2 gap-2"></div>
                 <button id="action-btn" class="w-full bg-slate-800 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-transform text-lg flex items-center justify-center gap-2">
                     <i class="fas fa-sword"></i> <span>攻撃</span>
                 </button>
@@ -637,46 +628,13 @@
         <!-- SKILL PAGE -->
         <section id="page-skill" class="page bg-slate-50 flex-col h-full min-h-0">
             <div class="p-4 bg-white border-b shrink-0">
-                <div class="flex justify-between items-center mb-4 px-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <button id="skill-reset-btn" class="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-black flex items-center gap-2">
-                            <i class="fas fa-rotate-left"></i>
-                            リセット
-                        </button>
-                        <button id="skill-point-mode" class="px-2 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-black flex items-center gap-2">
-                            <i class="fas fa-sliders"></i>
-                            +1
-                        </button>
-                    </div>
-                    <div class="text-sm font-bold text-[8px] bg-amber-100 text-amber-700 px-3 py-1 rounded-full">SP: <span id="skill-sp-display">0</span></div>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-black flex items-center gap-2"><i class="fas fa-star"></i> スキル</h2>
                 </div>
-                <!-- Job Select -->
-                <div class="flex items-center gap-2">
-                    <div class="text-slate-400 text-sm"><i class="fas fa-briefcase"></i></div>
-                    <select id="job-select" onchange="switchJob(this.value)" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-slate-50">
-                        <option value="warrior">戦士</option>
-                        <option value="mage">魔術師</option>
-                        <option value="thief">盗賊</option>
-                        <option value="ranger">レンジャー</option>
-                        <option value="paladin">聖騎士</option>
-                        <option value="monk">拳闘士</option>
-                        <option value="commonPassive">共通パッシブ(上限なし)</option>
-                    </select>
-                </div>
-                <div id="common-passive-hint" class="mt-2 hidden text-[10px] text-slate-500 font-bold bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">共通パッシブはLv上限なし / SP共有 / リセットで同時に戻ります。</div>
             </div>
-            <div class="flex bg-white shrink-0 shadow-sm">
-                <button onclick="switchSkillType('active')" id="tab-active" class="type-tab flex-1 py-3 text-sm text-slate-400 transition-all">アクティブ</button>
-                <button onclick="switchSkillType('passive')" id="tab-passive" class="type-tab flex-1 py-3 text-sm text-slate-400 transition-all">パッシブ</button>
+            <div class="flex-1 p-4 overflow-y-auto">
+                <div class="bg-white border rounded-2xl p-6 text-center text-slate-500 font-bold">-</div>
             </div>
-            <div class="px-4 py-3 bg-white border-b shrink-0">
-                <div class="flex items-center justify-between mb-1">
-                    <div class="text-xs font-black">アクティブスロット</div>
-                    <div class="text-[9px] text-slate-400">タップでスロット選択</div>
-                </div>
-                <div id="skill-slot-settings" class="grid grid-cols-2 gap-1.5"></div>
-            </div>
-            <div id="skill-list" class="flex-1 overflow-y-auto p-4 space-y-3 pb-8 min-h-0"></div>
         </section>
 
         <!-- INVENTORY PAGE -->
@@ -752,126 +710,8 @@
                         </ul>
                     </div>
                     
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-                        <div class="grid gap-3">
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-emerald-500"><i class="fas fa-arrow-up-long"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">闘志</div>
-                                    <div class="text-xs text-slate-500">攻撃力+10%/スタック。最大5スタック。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-rose-500"><i class="fas fa-arrow-down-long"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">衰弱</div>
-                                    <div class="text-xs text-slate-500">攻撃力-10%/スタック。最大5スタック。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-sky-500"><i class="fas fa-shield-halved"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">守勢</div>
-                                    <div class="text-xs text-slate-500">防御力+12%/スタック。最大4スタック。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-amber-500"><i class="fas fa-shield"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">脆甲</div>
-                                    <div class="text-xs text-slate-500">防御力-12%/スタック。最大4スタック。</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-                        <div class="grid gap-3">
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-skull-crossbones"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">毒</div>
-                                    <div class="text-xs text-slate-500">ターン開始時に最大HP依存ダメージ。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-droplet"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">出血</div>
-                                    <div class="text-xs text-slate-500">ターン開始時にSTR依存ダメージ。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-down-long"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">弱体</div>
-                                    <div class="text-xs text-slate-500">与ダメージ低下。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-shield-halved"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">脆弱</div>
-                                    <div class="text-xs text-slate-500">被ダメージ増加。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-arrow-up-long"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">強化</div>
-                                    <div class="text-xs text-slate-500">与ダメージ増加。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-snowflake"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">凍結</div>
-                                    <div class="text-xs text-slate-500">行動不能。被ダメージで解除。連続付与は確率が係数で減衰。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-eye-slash"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">暗闇</div>
-                                    <div class="text-xs text-slate-500">命中率・会心率低下。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-hand-sparkles"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">沈黙</div>
-                                    <div class="text-xs text-slate-500">スキル使用不可。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-person-running"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">迅速</div>
-                                    <div class="text-xs text-slate-500">命中率・回避率上昇。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-layer-group"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">バリア</div>
-                                    <div class="text-xs text-slate-500">ダメージを一定量吸収。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-retweet"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">反射</div>
-                                    <div class="text-xs text-slate-500">被ダメージの一部を反射。</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                <div class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-user-slash"></i></div>
-                                <div>
-                                    <div class="font-black text-slate-700">挑発</div>
-                                    <div class="text-xs text-slate-500">被ダメージ増加・回避率低下。</div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                        <div class="text-xs text-slate-500 font-bold">-</div>
                     </div>
 
                 </div>
@@ -924,7 +764,6 @@
         </button>
         <button onclick="switchPage('skill')" id="nav-skill" class="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-300 transition-all relative">
             <i class="fas fa-star text-xl"></i><span class="text-[9px] font-black">スキル</span>
-            <div id="nav-sp-dot" class="absolute top-3 right-6 w-2 h-2 bg-amber-500 rounded-full border-2 border-white hidden"></div>
         </button>
         <button onclick="switchPage('inventory')" id="nav-inventory" class="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-300 transition-all relative">
             <i class="fas fa-box-open text-xl"></i><span class="text-[9px] font-black">装備</span>
@@ -1106,7 +945,7 @@
                 <h3 class="font-black text-lg text-slate-800 flex items-center gap-2"><i class="fas fa-layer-group text-indigo-500"></i> プリセット</h3>
                 <button id="build-preset-close" class="text-slate-400 hover:text-slate-700 text-lg"><i class="fas fa-xmark"></i></button>
             </div>
-            <p class="text-[11px] text-slate-500 mb-4">装備・ポーション・スキルスロット・スキル配分を保存します。戦闘中は操作できません。</p>
+            <p class="text-[11px] text-slate-500 mb-4">保存内容は現在未実装です。</p>
             <div id="build-preset-list" class="space-y-3"></div>
             <button id="build-preset-close-bottom" class="mt-5 w-full bg-slate-100 text-slate-500 font-black py-3 rounded-2xl shadow">閉じる</button>
         </div>
@@ -1254,44 +1093,6 @@
         </div>
     </div>
 
-    <!-- STATUS EFFECT MODAL -->
-    <div id="status-effect-modal" class="fixed inset-0 bg-slate-900/80 z-[120] hidden items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl p-6 border-b-8 border-slate-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 id="status-effect-title" class="font-black text-lg text-slate-800 flex items-center gap-2"></h3>
-                <button id="status-effect-close" class="text-slate-400 hover:text-slate-700 text-lg"><i class="fas fa-xmark"></i></button>
-            </div>
-            <p id="status-effect-desc" class="text-xs text-slate-600"></p>
-            <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
-                <span id="status-effect-stacks"></span>
-                <span id="status-effect-turns"></span>
-            </div>
-            <button id="status-effect-close-bottom" class="mt-5 w-full bg-slate-800 text-white font-black py-3 rounded-2xl shadow-lg">閉じる</button>
-        </div>
-    </div>
-
-    <!-- SKILL DETAIL MODAL -->
-    <div id="skill-detail-modal" class="fixed inset-0 bg-slate-900/80 z-[120] hidden items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl p-6 border-b-8 border-slate-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 id="skill-detail-title" class="font-black text-lg text-slate-800 flex items-center gap-2"></h3>
-                <button id="skill-detail-close" class="text-slate-400 hover:text-slate-700 text-lg"><i class="fas fa-xmark"></i></button>
-            </div>
-            <div id="skill-detail-meta" class="text-[10px] text-slate-500 font-bold mb-2"></div>
-            <p id="skill-detail-desc" class="text-xs text-slate-600"></p>
-            <div id="skill-detail-stats" class="mt-4 space-y-1 text-[10px] text-slate-500 font-bold"></div>
-            <div class="mt-4">
-                <div class="text-[10px] text-slate-400 font-black mb-1">追加効果</div>
-                <div id="skill-detail-effects" class="space-y-1 text-[10px] text-slate-500 font-bold"></div>
-            </div>
-            <div class="mt-4">
-                <div class="text-[10px] text-slate-400 font-black mb-1">マイルストーン</div>
-                <div id="skill-detail-milestones" class="space-y-1 text-[10px] text-slate-500 font-bold"></div>
-            </div>
-            <button id="skill-detail-close-bottom" class="mt-5 w-full bg-slate-800 text-white font-black py-3 rounded-2xl shadow-lg">閉じる</button>
-        </div>
-    </div>
-
     <!-- WARP MODAL -->
     <div id="warp-modal" class="fixed inset-0 bg-slate-900/80 z-[115] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-6 border-b-8 border-slate-200">
@@ -1383,7 +1184,7 @@
                     if (bar) bar.style.width = '0%';
                 });
 
-                ['battle-log', 'drop-log-list', 'enemy-status-effects', 'player-status-effects'].forEach((id) => {
+                ['battle-log', 'drop-log-list'].forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) el.innerHTML = '';
                 });

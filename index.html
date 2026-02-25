@@ -1205,7 +1205,17 @@
                 CRITICAL_MULTIPLIER: 2,
                 DOUBLE_CRITICAL_MULTIPLIER: 4,
                 BONUS_ON_HIT_STATUS_AILMENT_SCALE: 0.5,
-                BONUS_ON_HIT_DRAIN_SCALE: 0.3
+                BONUS_ON_HIT_DRAIN_SCALE: 0.3,
+                BASE_HIT_CHANCE: 85,
+                HIT_DELTA_SCALE: 20,
+                HIT_DELTA_SOFTNESS: 50,
+                MIN_HIT_CHANCE: 10,
+                MAX_HIT_CHANCE: 98,
+                ENEMY_HIT_CHANCE_FLAT_BONUS: 0,
+                ENEMY_HIT_CHANCE_MULTIPLIER: 1,
+                PHYSICAL_DEFENSE_SOFTNESS: 100,
+                MAGIC_DEFENSE_SOFTNESS: 140,
+                MIN_DAMAGE: 1
             });
 
             const PrimaryStatKey = Object.freeze({
@@ -1243,6 +1253,11 @@
                 None: 'None',
                 Critical: 'Critical',
                 DoubleCritical: 'DoubleCritical'
+            });
+
+            const CombatActorSide = Object.freeze({
+                Player: 'Player',
+                Enemy: 'Enemy'
             });
 
             const createPrimaryStats = (stats = {}) => ({
@@ -1521,6 +1536,93 @@
                 }
             }
 
+            const clamp = (min, value, max) => Math.min(max, Math.max(min, value));
+
+            const calculatePhysicalHitChancePercent = ({
+                attackerHitRate,
+                defenderAvoidRate,
+                flatBonus = 0,
+                multiplier = 1
+            }) => {
+                const attackerHit = Number.isFinite(attackerHitRate) ? attackerHitRate : 0;
+                const defenderAvoid = Number.isFinite(defenderAvoidRate) ? defenderAvoidRate : 0;
+                const delta = attackerHit - defenderAvoid;
+                const baseChance = COMBAT_CONSTANTS.BASE_HIT_CHANCE
+                    + (delta * COMBAT_CONSTANTS.HIT_DELTA_SCALE)
+                    / (Math.abs(delta) + COMBAT_CONSTANTS.HIT_DELTA_SOFTNESS);
+                const adjustedChance = (baseChance + flatBonus) * multiplier;
+                return clamp(
+                    COMBAT_CONSTANTS.MIN_HIT_CHANCE,
+                    adjustedChance,
+                    COMBAT_CONSTANTS.MAX_HIT_CHANCE
+                );
+            };
+
+            const toNonNegativeNumber = (value, fallback = 0) => {
+                const picked = Number.isFinite(value) ? Number(value) : fallback;
+                return Math.max(0, picked);
+            };
+
+            const calcPhysicalDamageOnHit = ({
+                attackerSecondaryStats,
+                defenderSecondaryStats,
+                skillPowerMultiplier = 1,
+                totalBonusDamagePercent = 0,
+                critTier = CritTier.None,
+                config = {}
+            }) => {
+                const attackerSecondary = createSecondaryStats(attackerSecondaryStats);
+                const defenderSecondary = createSecondaryStats(defenderSecondaryStats);
+                const safeSkillPowerMultiplier = toNonNegativeNumber(skillPowerMultiplier, 1);
+                const safeBonusDamagePercent = toNonNegativeNumber(totalBonusDamagePercent, 0);
+                const physicalDefenseSoftness = toNonNegativeNumber(config.physicalDefenseSoftness, COMBAT_CONSTANTS.PHYSICAL_DEFENSE_SOFTNESS);
+                const minDamage = toNonNegativeNumber(config.minDamage, COMBAT_CONSTANTS.MIN_DAMAGE);
+                const attackPart = attackerSecondary.PhysicalAttack * safeSkillPowerMultiplier;
+                const reducedDamage = attackPart * physicalDefenseSoftness / (defenderSecondary.Defense + physicalDefenseSoftness);
+                const critMultiplier = CriticalResolver.getCritMultiplier(critTier);
+                const damageBeforeBonus = Math.max(minDamage, reducedDamage * critMultiplier);
+                const finalDamage = Math.floor(damageBeforeBonus * (1 + safeBonusDamagePercent / 100));
+
+                return {
+                    isHit: true,
+                    isCritical: critTier !== CritTier.None,
+                    isDoubleCritical: critTier === CritTier.DoubleCritical,
+                    finalDamage,
+                    attackPart,
+                    reducedDamage,
+                    damageBeforeBonus
+                };
+            };
+
+            const calcMagicDamage = ({
+                attackerSecondaryStats,
+                defenderSecondaryStats,
+                skillPowerMultiplier = 1,
+                totalBonusDamagePercent = 0,
+                config = {}
+            }) => {
+                const attackerSecondary = createSecondaryStats(attackerSecondaryStats);
+                const defenderSecondary = createSecondaryStats(defenderSecondaryStats);
+                const safeSkillPowerMultiplier = toNonNegativeNumber(skillPowerMultiplier, 1);
+                const safeBonusDamagePercent = toNonNegativeNumber(totalBonusDamagePercent, 0);
+                const magicDefenseSoftness = toNonNegativeNumber(config.magicDefenseSoftness, COMBAT_CONSTANTS.MAGIC_DEFENSE_SOFTNESS);
+                const minDamage = toNonNegativeNumber(config.minDamage, COMBAT_CONSTANTS.MIN_DAMAGE);
+                const attackPart = attackerSecondary.MagicAttack * safeSkillPowerMultiplier;
+                const reducedDamage = attackPart * magicDefenseSoftness / (defenderSecondary.Defense + magicDefenseSoftness);
+                const damageBeforeBonus = Math.max(minDamage, reducedDamage);
+                const finalDamage = Math.floor(damageBeforeBonus * (1 + safeBonusDamagePercent / 100));
+
+                return {
+                    isHit: true,
+                    isCritical: false,
+                    isDoubleCritical: false,
+                    finalDamage,
+                    attackPart,
+                    reducedDamage,
+                    damageBeforeBonus
+                };
+            };
+
             const resolveHitResults = ({
                 attackDefinition,
                 attackerPrimaryStats,
@@ -1528,6 +1630,8 @@
                 attackerSecondaryStats,
                 defenderSecondaryStats,
                 rollCritical,
+                hitChanceModifiers,
+                attackerSide = CombatActorSide.Player,
                 rng = Math.random
             }) => {
                 const attacker = createPrimaryStats(attackerPrimaryStats);
@@ -1539,6 +1643,20 @@
                     attackerDex: attacker.DEX,
                     rng
                 });
+
+                const defaultHitChanceModifiers = attackerSide === CombatActorSide.Enemy
+                    ? {
+                        flatBonus: COMBAT_CONSTANTS.ENEMY_HIT_CHANCE_FLAT_BONUS,
+                        multiplier: COMBAT_CONSTANTS.ENEMY_HIT_CHANCE_MULTIPLIER
+                    }
+                    : {
+                        flatBonus: 0,
+                        multiplier: 1
+                    };
+                const resolvedHitChanceModifiers = {
+                    ...defaultHitChanceModifiers,
+                    ...(hitChanceModifiers || {})
+                };
 
                 const rollCriticalBySecondary = ({ hit, rng: random }) => {
                     if (hit.damageType === 'Magical') {
@@ -1553,7 +1671,17 @@
                     : rollCriticalBySecondary;
 
                 return hitSequence.map((hit) => {
-                    const isCritical = !!resolveCritical({
+                    const isPhysicalHit = hit.damageType === 'Physical';
+                    const hitChancePercent = isPhysicalHit
+                        ? calculatePhysicalHitChancePercent({
+                            attackerHitRate: attackerSecondary.HitRate,
+                            defenderAvoidRate: defenderSecondary.AvoidRate,
+                            flatBonus: resolvedHitChanceModifiers.flatBonus,
+                            multiplier: resolvedHitChanceModifiers.multiplier
+                        })
+                        : 100;
+                    const isHit = !isPhysicalHit || (rng() < (hitChancePercent / 100));
+                    const isCritical = isHit && !!resolveCritical({
                         hit,
                         attacker,
                         defender,
@@ -1569,6 +1697,8 @@
 
                     return {
                         ...hit,
+                        isHit,
+                        hitChancePercent,
                         critTier,
                         critMultiplier: CriticalResolver.getCritMultiplier(critTier)
                     };
@@ -1588,6 +1718,7 @@
                 SecondaryStatKey,
                 HitSourceType,
                 CritTier,
+                CombatActorSide,
                 DEFAULT_BASE_STAT_CONFIG,
                 DEFAULT_PRIMARY_STATS,
                 createPrimaryStats,
@@ -1596,6 +1727,9 @@
                 PlayerStatusCalculator,
                 HitSequenceResolver,
                 CriticalResolver,
+                calculatePhysicalHitChancePercent,
+                calcPhysicalDamageOnHit,
+                calcMagicDamage,
                 resolveHitResults,
                 NORMAL_ATTACK_HIT_DEFINITION
             });
@@ -1777,6 +1911,143 @@
                     }
                 });
 
+                const hitChanceDeltaZero = calculatePhysicalHitChancePercent({
+                    attackerHitRate: 50,
+                    defenderAvoidRate: 50
+                });
+                const hitChanceUpperClamp = calculatePhysicalHitChancePercent({
+                    attackerHitRate: 9999,
+                    defenderAvoidRate: 0
+                });
+                const hitChanceLowerClamp = calculatePhysicalHitChancePercent({
+                    attackerHitRate: 0,
+                    defenderAvoidRate: 9999,
+                    flatBonus: -999
+                });
+                const enemyModifierBaseline = calculatePhysicalHitChancePercent({
+                    attackerHitRate: 120,
+                    defenderAvoidRate: 20,
+                    flatBonus: COMBAT_CONSTANTS.ENEMY_HIT_CHANCE_FLAT_BONUS,
+                    multiplier: COMBAT_CONSTANTS.ENEMY_HIT_CHANCE_MULTIPLIER
+                });
+                const neutralBaseline = calculatePhysicalHitChancePercent({
+                    attackerHitRate: 120,
+                    defenderAvoidRate: 20
+                });
+                const playerSidePhysicalResult = resolveHitResults({
+                    attackDefinition: {
+                        guaranteedHits: 1,
+                        skillBonusHitCap: 0,
+                        bonusHitChanceTable: [],
+                        bonusHitDamageScaleTable: [],
+                        damageType: 'Physical'
+                    },
+                    attackerPrimaryStats: DEFAULT_PRIMARY_STATS,
+                    defenderPrimaryStats: DEFAULT_PRIMARY_STATS,
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.HitRate]: 120,
+                        [SecondaryStatKey.CriticalChance]: 0
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.AvoidRate]: 20
+                    },
+                    attackerSide: CombatActorSide.Player,
+                    rng: () => 0
+                });
+                const enemySidePhysicalResult = resolveHitResults({
+                    attackDefinition: {
+                        guaranteedHits: 1,
+                        skillBonusHitCap: 0,
+                        bonusHitChanceTable: [],
+                        bonusHitDamageScaleTable: [],
+                        damageType: 'Physical'
+                    },
+                    attackerPrimaryStats: DEFAULT_PRIMARY_STATS,
+                    defenderPrimaryStats: DEFAULT_PRIMARY_STATS,
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.HitRate]: 120,
+                        [SecondaryStatKey.CriticalChance]: 0
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.AvoidRate]: 20
+                    },
+                    attackerSide: CombatActorSide.Enemy,
+                    rng: () => 0
+                });
+                const magicalResult = resolveHitResults({
+                    attackDefinition: {
+                        guaranteedHits: 1,
+                        skillBonusHitCap: 0,
+                        bonusHitChanceTable: [],
+                        bonusHitDamageScaleTable: [],
+                        damageType: 'Magical'
+                    },
+                    attackerPrimaryStats: DEFAULT_PRIMARY_STATS,
+                    defenderPrimaryStats: DEFAULT_PRIMARY_STATS,
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.HitRate]: 1,
+                        [SecondaryStatKey.CriticalChance]: 0
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.AvoidRate]: 999
+                    },
+                    rng: () => 0.9999
+                });
+                const physicalNormalDamage = calcPhysicalDamageOnHit({
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.PhysicalAttack]: 40
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.Defense]: 25
+                    },
+                    skillPowerMultiplier: 1.5,
+                    totalBonusDamagePercent: 20,
+                    critTier: CritTier.None
+                });
+                const physicalCriticalDamage = calcPhysicalDamageOnHit({
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.PhysicalAttack]: 40
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.Defense]: 25
+                    },
+                    skillPowerMultiplier: 1.5,
+                    totalBonusDamagePercent: 20,
+                    critTier: CritTier.Critical
+                });
+                const physicalDoubleCriticalDamage = calcPhysicalDamageOnHit({
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.PhysicalAttack]: 40
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.Defense]: 25
+                    },
+                    skillPowerMultiplier: 1.5,
+                    totalBonusDamagePercent: 20,
+                    critTier: CritTier.DoubleCritical
+                });
+                const magicalDamage = calcMagicDamage({
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.MagicAttack]: 46
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.Defense]: 25
+                    },
+                    skillPowerMultiplier: 1.8,
+                    totalBonusDamagePercent: 20
+                });
+                const minDamagePhysical = calcPhysicalDamageOnHit({
+                    attackerSecondaryStats: {
+                        [SecondaryStatKey.PhysicalAttack]: 1
+                    },
+                    defenderSecondaryStats: {
+                        [SecondaryStatKey.Defense]: 999999
+                    },
+                    skillPowerMultiplier: 1,
+                    totalBonusDamagePercent: 0,
+                    critTier: CritTier.None
+                });
+
                 const checks = [
                     { ok: testResult.totalValues[SecondaryStatKey.MaxHP] === 220, message: 'MaxHP式' },
                     { ok: testResult.totalValues[SecondaryStatKey.MaxMP] === 130, message: 'MaxMP式' },
@@ -1785,7 +2056,19 @@
                     { ok: testResult.totalValues.DefenseBase === 25, message: 'DefenseBase式' },
                     { ok: testResult.secondaryStats[SecondaryStatKey.Defense] === 30, message: 'BonusDefensePercent適用' },
                     { ok: Math.abs(testResult.totalValues[SecondaryStatKey.CriticalChance] - 6.5) < 1e-9, message: 'CriticalChance式' },
-                    { ok: Math.abs(testResult.totalValues[SecondaryStatKey.DropRateBonus] - 2.0) < 1e-9, message: 'DropRateBonus式' }
+                    { ok: Math.abs(testResult.totalValues[SecondaryStatKey.DropRateBonus] - 2.0) < 1e-9, message: 'DropRateBonus式' },
+                    { ok: Math.abs(hitChanceDeltaZero - COMBAT_CONSTANTS.BASE_HIT_CHANCE) < 1e-9, message: '命中率Delta=0式' },
+                    { ok: Math.abs(hitChanceUpperClamp - COMBAT_CONSTANTS.MAX_HIT_CHANCE) < 1e-9, message: '命中率上限クランプ' },
+                    { ok: Math.abs(hitChanceLowerClamp - COMBAT_CONSTANTS.MIN_HIT_CHANCE) < 1e-9, message: '命中率下限クランプ' },
+                    { ok: magicalResult.length === 1 && magicalResult[0].isHit === true && magicalResult[0].hitChancePercent === 100, message: '魔法必中' },
+                    { ok: Math.abs(enemyModifierBaseline - neutralBaseline) < 1e-9, message: '敵補正初期値の中立性' },
+                    { ok: playerSidePhysicalResult.length === 1 && Math.abs(playerSidePhysicalResult[0].hitChancePercent - neutralBaseline) < 1e-9, message: 'プレイヤー側は敵補正を適用しない' },
+                    { ok: enemySidePhysicalResult.length === 1 && Math.abs(enemySidePhysicalResult[0].hitChancePercent - neutralBaseline) < 1e-9, message: '敵側初期補正は中立で同式' },
+                    { ok: physicalNormalDamage.finalDamage === 57, message: '物理ダメージ通常式' },
+                    { ok: physicalCriticalDamage.finalDamage === 115 && physicalCriticalDamage.isCritical === true, message: '物理ダメージクリティカル式' },
+                    { ok: physicalDoubleCriticalDamage.finalDamage === 230 && physicalDoubleCriticalDamage.isDoubleCritical === true, message: '物理ダメージダブルクリティカル式' },
+                    { ok: magicalDamage.finalDamage === 84 && magicalDamage.isCritical === false && magicalDamage.isHit === true, message: '魔法ダメージ式' },
+                    { ok: minDamagePhysical.finalDamage === COMBAT_CONSTANTS.MIN_DAMAGE, message: '最低ダメージ保証' }
                 ];
 
                 const failed = checks.find((check) => !check.ok);

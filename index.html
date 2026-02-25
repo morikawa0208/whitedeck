@@ -1160,6 +1160,233 @@
 
     <script>
         (() => {
+            const COMBAT_CONSTANTS = Object.freeze({
+                DEX_PER_BONUS_HIT_CAP: 100,
+                DOUBLE_CRITICAL_LUCK_GAP: 400,
+                CRITICAL_MULTIPLIER: 2,
+                DOUBLE_CRITICAL_MULTIPLIER: 4,
+                BONUS_ON_HIT_STATUS_AILMENT_SCALE: 0.5,
+                BONUS_ON_HIT_DRAIN_SCALE: 0.3
+            });
+
+            const PrimaryStatKey = Object.freeze({
+                STR: 'STR',
+                INT: 'INT',
+                VIT: 'VIT',
+                DEX: 'DEX',
+                LUK: 'LUK'
+            });
+
+            const SecondaryStatKey = Object.freeze({
+                MaxHP: 'MaxHP',
+                MaxMP: 'MaxMP',
+                PhysicalAttack: 'PhysicalAttack',
+                MagicAttack: 'MagicAttack',
+                Defense: 'Defense',
+                HitRate: 'HitRate',
+                AvoidRate: 'AvoidRate',
+                CriticalChance: 'CriticalChance',
+                BonusDamagePercent: 'BonusDamagePercent',
+                BonusDefensePercent: 'BonusDefensePercent',
+                DropRateBonus: 'DropRateBonus',
+                RareDropRateBonus: 'RareDropRateBonus',
+                EnchantSuccessRateBonus: 'EnchantSuccessRateBonus',
+                GoldGainRate: 'GoldGainRate',
+                ExpGainRate: 'ExpGainRate'
+            });
+
+            const HitSourceType = Object.freeze({
+                Guaranteed: 'Guaranteed',
+                Bonus: 'Bonus'
+            });
+
+            const CritTier = Object.freeze({
+                None: 'None',
+                Critical: 'Critical',
+                DoubleCritical: 'DoubleCritical'
+            });
+
+            const createPrimaryStats = (stats = {}) => ({
+                [PrimaryStatKey.STR]: Number.isFinite(stats[PrimaryStatKey.STR]) ? Math.max(0, Math.floor(stats[PrimaryStatKey.STR])) : 0,
+                [PrimaryStatKey.INT]: Number.isFinite(stats[PrimaryStatKey.INT]) ? Math.max(0, Math.floor(stats[PrimaryStatKey.INT])) : 0,
+                [PrimaryStatKey.VIT]: Number.isFinite(stats[PrimaryStatKey.VIT]) ? Math.max(0, Math.floor(stats[PrimaryStatKey.VIT])) : 0,
+                [PrimaryStatKey.DEX]: Number.isFinite(stats[PrimaryStatKey.DEX]) ? Math.max(0, Math.floor(stats[PrimaryStatKey.DEX])) : 0,
+                [PrimaryStatKey.LUK]: Number.isFinite(stats[PrimaryStatKey.LUK]) ? Math.max(0, Math.floor(stats[PrimaryStatKey.LUK])) : 0
+            });
+
+            const createSecondaryStats = (stats = {}) => {
+                const pickFlat = (key) => (Number.isFinite(stats[key]) ? Math.max(0, Number(stats[key])) : 0);
+                const pickRate = (key, min = 0, max = 1) => {
+                    const value = Number.isFinite(stats[key]) ? Number(stats[key]) : 0;
+                    return Math.min(max, Math.max(min, value));
+                };
+
+                return {
+                    [SecondaryStatKey.MaxHP]: pickFlat(SecondaryStatKey.MaxHP),
+                    [SecondaryStatKey.MaxMP]: pickFlat(SecondaryStatKey.MaxMP),
+                    [SecondaryStatKey.PhysicalAttack]: pickFlat(SecondaryStatKey.PhysicalAttack),
+                    [SecondaryStatKey.MagicAttack]: pickFlat(SecondaryStatKey.MagicAttack),
+                    [SecondaryStatKey.Defense]: pickFlat(SecondaryStatKey.Defense),
+                    [SecondaryStatKey.HitRate]: pickFlat(SecondaryStatKey.HitRate),
+                    [SecondaryStatKey.AvoidRate]: pickRate(SecondaryStatKey.AvoidRate, 0, 0.95),
+                    [SecondaryStatKey.CriticalChance]: pickRate(SecondaryStatKey.CriticalChance),
+                    [SecondaryStatKey.BonusDamagePercent]: pickRate(SecondaryStatKey.BonusDamagePercent, -0.99, 10),
+                    [SecondaryStatKey.BonusDefensePercent]: pickRate(SecondaryStatKey.BonusDefensePercent, -0.99, 10),
+                    [SecondaryStatKey.DropRateBonus]: pickRate(SecondaryStatKey.DropRateBonus, -0.99, 10),
+                    [SecondaryStatKey.RareDropRateBonus]: pickRate(SecondaryStatKey.RareDropRateBonus, -0.99, 10),
+                    [SecondaryStatKey.EnchantSuccessRateBonus]: pickRate(SecondaryStatKey.EnchantSuccessRateBonus, -0.99, 10),
+                    [SecondaryStatKey.GoldGainRate]: pickRate(SecondaryStatKey.GoldGainRate, -0.99, 10),
+                    [SecondaryStatKey.ExpGainRate]: pickRate(SecondaryStatKey.ExpGainRate, -0.99, 10)
+                };
+            };
+
+            class HitSequenceResolver {
+                static resolve({ attackDefinition, attackerDex, rng = Math.random }) {
+                    const guaranteedHits = Math.max(0, Math.floor(attackDefinition.guaranteedHits || 0));
+                    const skillBonusHitCap = Math.max(0, Math.floor(attackDefinition.skillBonusHitCap || 0));
+                    const dexBonusHitCap = Math.floor(Math.max(0, attackerDex || 0) / COMBAT_CONSTANTS.DEX_PER_BONUS_HIT_CAP);
+                    const actualBonusHitCap = Math.min(dexBonusHitCap, skillBonusHitCap);
+                    const bonusHitChanceTable = Array.isArray(attackDefinition.bonusHitChanceTable) ? attackDefinition.bonusHitChanceTable : [];
+                    const bonusHitDamageScaleTable = Array.isArray(attackDefinition.bonusHitDamageScaleTable) ? attackDefinition.bonusHitDamageScaleTable : [];
+
+                    const hitSequence = [];
+                    for (let i = 0; i < guaranteedHits; i += 1) {
+                        hitSequence.push({
+                            hitSourceType: HitSourceType.Guaranteed,
+                            isGuaranteedHit: true,
+                            damageScale: 1,
+                            bonusSlotIndex: null,
+                            onHitEffectScale: 1
+                        });
+                    }
+
+                    for (let i = 0; i < actualBonusHitCap; i += 1) {
+                        const chance = HitSequenceResolver.#pickTableValue(bonusHitChanceTable, i, 0);
+                        if (rng() < chance) {
+                            hitSequence.push({
+                                hitSourceType: HitSourceType.Bonus,
+                                isGuaranteedHit: false,
+                                damageScale: HitSequenceResolver.#pickTableValue(bonusHitDamageScaleTable, i, 0),
+                                bonusSlotIndex: i,
+                                onHitEffectScale: {
+                                    statusAilment: COMBAT_CONSTANTS.BONUS_ON_HIT_STATUS_AILMENT_SCALE,
+                                    hpMpDrain: COMBAT_CONSTANTS.BONUS_ON_HIT_DRAIN_SCALE,
+                                    triggerPolicy: 'OncePerAction'
+                                }
+                            });
+                        }
+                    }
+
+                    return hitSequence.map((hit, index) => ({ ...hit, hitIndex: index }));
+                }
+
+                static #pickTableValue(table, index, fallback) {
+                    if (!table.length) {
+                        return fallback;
+                    }
+
+                    const picked = index < table.length ? table[index] : table[table.length - 1];
+                    return Number.isFinite(picked) ? picked : fallback;
+                }
+            }
+
+            class CriticalResolver {
+                static resolveCritTier({ isCritical, attackerLuk, defenderLuk }) {
+                    if (!isCritical) {
+                        return CritTier.None;
+                    }
+
+                    const luckGap = (attackerLuk || 0) - (defenderLuk || 0);
+                    if (luckGap >= COMBAT_CONSTANTS.DOUBLE_CRITICAL_LUCK_GAP) {
+                        return CritTier.DoubleCritical;
+                    }
+
+                    return CritTier.Critical;
+                }
+
+                static getCritMultiplier(critTier) {
+                    if (critTier === CritTier.DoubleCritical) {
+                        return COMBAT_CONSTANTS.DOUBLE_CRITICAL_MULTIPLIER;
+                    }
+                    if (critTier === CritTier.Critical) {
+                        return COMBAT_CONSTANTS.CRITICAL_MULTIPLIER;
+                    }
+                    return 1;
+                }
+            }
+
+            const resolveHitResults = ({
+                attackDefinition,
+                attackerPrimaryStats,
+                defenderPrimaryStats,
+                attackerSecondaryStats,
+                defenderSecondaryStats,
+                rollCritical,
+                rng = Math.random
+            }) => {
+                const attacker = createPrimaryStats(attackerPrimaryStats);
+                const defender = createPrimaryStats(defenderPrimaryStats);
+                const attackerSecondary = createSecondaryStats(attackerSecondaryStats);
+                const defenderSecondary = createSecondaryStats(defenderSecondaryStats);
+                const hitSequence = HitSequenceResolver.resolve({
+                    attackDefinition,
+                    attackerDex: attacker.DEX,
+                    rng
+                });
+
+                const rollCriticalBySecondary = ({ rng: random }) => {
+                    const criticalChance = attackerSecondary.CriticalChance;
+                    return random() < criticalChance;
+                };
+
+                const resolveCritical = typeof rollCritical === 'function'
+                    ? rollCritical
+                    : rollCriticalBySecondary;
+
+                return hitSequence.map((hit) => {
+                    const isCritical = !!resolveCritical({
+                        hit,
+                        attacker,
+                        defender,
+                        attackerSecondary,
+                        defenderSecondary,
+                        rng
+                    });
+                    const critTier = CriticalResolver.resolveCritTier({
+                        isCritical,
+                        attackerLuk: attacker.LUK,
+                        defenderLuk: defender.LUK
+                    });
+
+                    return {
+                        ...hit,
+                        critTier,
+                        critMultiplier: CriticalResolver.getCritMultiplier(critTier)
+                    };
+                });
+            };
+
+            const NORMAL_ATTACK_HIT_DEFINITION = Object.freeze({
+                guaranteedHits: 1,
+                skillBonusHitCap: 3,
+                bonusHitChanceTable: [0.6, 0.35, 0.2, 0.1, 0.05, 0.05],
+                bonusHitDamageScaleTable: [0.7, 0.55, 0.4, 0.3, 0.3]
+            });
+
+            window.CombatSpec = Object.freeze({
+                COMBAT_CONSTANTS,
+                PrimaryStatKey,
+                SecondaryStatKey,
+                HitSourceType,
+                CritTier,
+                createPrimaryStats,
+                createSecondaryStats,
+                HitSequenceResolver,
+                CriticalResolver,
+                resolveHitResults,
+                NORMAL_ATTACK_HIT_DEFINITION
+            });
+
             const statValueIds = [
                 'player-hp-text', 'player-mp-text', 'player-exp-text-battle',
                 'enemy-hp-text', 'enemy-name',

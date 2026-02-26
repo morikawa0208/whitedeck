@@ -515,22 +515,56 @@
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">STR（筋力）</span>
                         <span class="text-2xl font-black text-slate-700" id="status-atk">1</span>
+                        <div class="mt-2 grid grid-cols-4 gap-1">
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="STR" data-delta="1">+1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="STR" data-delta="10">+10</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="STR" data-delta="-1">-1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="STR" data-delta="-10">-10</button>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">VIT（体力）</span>
                         <span class="text-2xl font-black text-slate-700" id="status-def">1</span>
+                        <div class="mt-2 grid grid-cols-4 gap-1">
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="VIT" data-delta="1">+1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="VIT" data-delta="10">+10</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="VIT" data-delta="-1">-1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="VIT" data-delta="-10">-10</button>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">INT（知力）</span>
                         <span class="text-2xl font-black text-slate-700" id="status-int">1</span>
+                        <div class="mt-2 grid grid-cols-4 gap-1">
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="INT" data-delta="1">+1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="INT" data-delta="10">+10</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="INT" data-delta="-1">-1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="INT" data-delta="-10">-10</button>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">DEX（器用）</span>
                         <span class="text-2xl font-black text-slate-700" id="status-dex">1</span>
+                        <div class="mt-2 grid grid-cols-4 gap-1">
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="DEX" data-delta="1">+1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="DEX" data-delta="10">+10</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="DEX" data-delta="-1">-1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="DEX" data-delta="-10">-10</button>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">LUK（運）</span>
                         <span class="text-2xl font-black text-slate-700" id="status-luk">1</span>
+                        <div class="mt-2 grid grid-cols-4 gap-1">
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="LUK" data-delta="1">+1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="LUK" data-delta="10">+10</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="LUK" data-delta="-1">-1</button>
+                            <button class="stat-adjust-btn py-1 rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-600" data-stat="LUK" data-delta="-10">-10</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-end items-end">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Stat Point</span>
+                        <span class="text-2xl font-black text-indigo-600" id="status-stat-points">0</span>
                     </div>
                 </div>
             </div>
@@ -1738,6 +1772,102 @@
                 NORMAL_ATTACK_HIT_DEFINITION
             });
 
+            const LEVEL_UP_STAT_POINT_GAIN = 5;
+            const MIN_PRIMARY_STAT_VALUE = 1;
+
+            const playerProgressState = {
+                level: 1,
+                exp: 0,
+                statPoints: 0,
+                primaryStats: createPrimaryStats(DEFAULT_PRIMARY_STATS)
+            };
+
+            const getRequiredExp = (level) => Math.max(1, Math.floor(100 * Math.pow(1.2, Math.max(0, level - 1))));
+
+            const updateStatAdjustButtonState = () => {
+                const buttons = document.querySelectorAll('.stat-adjust-btn');
+                buttons.forEach((button) => {
+                    const statKey = button.dataset.stat;
+                    const delta = Number(button.dataset.delta || 0);
+                    const currentValue = playerProgressState.primaryStats[statKey] || MIN_PRIMARY_STAT_VALUE;
+                    let canApply = true;
+                    if (delta > 0) {
+                        canApply = playerProgressState.statPoints >= delta;
+                    } else if (delta < 0) {
+                        canApply = currentValue + delta >= MIN_PRIMARY_STAT_VALUE;
+                    }
+                    button.disabled = !canApply;
+                    button.classList.toggle('opacity-40', !canApply);
+                    button.classList.toggle('cursor-not-allowed', !canApply);
+                });
+            };
+
+            const renderStatusSummary = () => {
+                const levelEl = document.getElementById('status-lvl');
+                const expEl = document.getElementById('status-exp');
+                const nextEl = document.getElementById('status-next');
+                const expBarEl = document.getElementById('status-exp-bar');
+                const statPointsEl = document.getElementById('status-stat-points');
+                const requiredExp = getRequiredExp(playerProgressState.level);
+                if (levelEl) {
+                    levelEl.innerText = String(playerProgressState.level);
+                }
+                if (expEl) {
+                    expEl.innerText = String(playerProgressState.exp);
+                }
+                if (nextEl) {
+                    nextEl.innerText = String(requiredExp);
+                }
+                if (expBarEl) {
+                    const ratio = requiredExp > 0 ? Math.min(100, Math.max(0, (playerProgressState.exp / requiredExp) * 100)) : 0;
+                    expBarEl.style.width = `${ratio.toFixed(2)}%`;
+                }
+                if (statPointsEl) {
+                    statPointsEl.innerText = String(playerProgressState.statPoints);
+                }
+                updateStatAdjustButtonState();
+            };
+
+            const addExperience = (amount) => {
+                if (!Number.isFinite(amount) || amount <= 0) {
+                    return;
+                }
+                playerProgressState.exp += Math.floor(amount);
+                while (playerProgressState.exp >= getRequiredExp(playerProgressState.level)) {
+                    const required = getRequiredExp(playerProgressState.level);
+                    playerProgressState.exp -= required;
+                    playerProgressState.level += 1;
+                    playerProgressState.statPoints += LEVEL_UP_STAT_POINT_GAIN;
+                }
+                renderStatusSummary();
+            };
+
+            const changePrimaryStat = (statKey, delta) => {
+                if (!Object.prototype.hasOwnProperty.call(playerProgressState.primaryStats, statKey)) {
+                    return;
+                }
+                const value = Number(playerProgressState.primaryStats[statKey] || MIN_PRIMARY_STAT_VALUE);
+                if (delta > 0) {
+                    if (playerProgressState.statPoints < delta) {
+                        return;
+                    }
+                    playerProgressState.primaryStats[statKey] = value + delta;
+                    playerProgressState.statPoints -= delta;
+                } else if (delta < 0) {
+                    const maxDecrement = Math.max(0, value - MIN_PRIMARY_STAT_VALUE);
+                    const decrement = Math.min(Math.abs(delta), maxDecrement);
+                    if (decrement <= 0) {
+                        return;
+                    }
+                    playerProgressState.primaryStats[statKey] = value - decrement;
+                    playerProgressState.statPoints += decrement;
+                } else {
+                    return;
+                }
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats });
+                renderStatusSummary();
+            };
+
             const renderDerivedSecondaryStats = ({
                 primaryStats = DEFAULT_PRIMARY_STATS,
                 bonusStats = {}
@@ -1845,7 +1975,7 @@
             const statValueIds = [
                 'player-hp-text', 'player-mp-text', 'player-exp-text-battle',
                 'enemy-hp-text', 'enemy-name',
-                'status-lvl', 'status-atk', 'status-def', 'status-int', 'status-dex', 'status-luk',
+                'status-lvl', 'status-atk', 'status-def', 'status-int', 'status-dex', 'status-luk', 'status-stat-points',
                 'status-exp', 'status-next',
                 'stat-max-hp', 'stat-max-mp', 'stat-atk-flat', 'stat-magic-atk',
                 'stat-def-flat', 'stat-hit', 'stat-crit', 'stat-dmg', 'stat-dr',
@@ -2209,7 +2339,8 @@
 
                 setDashValues();
                 runSecondaryStatSelfTests();
-                renderDerivedSecondaryStats();
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats });
+                renderStatusSummary();
                 switchPage('status');
 
                 const secondaryBreakdownBtn = document.getElementById('secondary-breakdown-btn');
@@ -2265,6 +2396,15 @@
                         }
                     });
                 }
+
+                document.querySelectorAll('.stat-adjust-btn').forEach((button) => {
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        const statKey = button.dataset.stat;
+                        const delta = Number(button.dataset.delta || 0);
+                        changePrimaryStat(statKey, delta);
+                    });
+                });
 
                 if (bottomMenuBackdrop) {
                     bottomMenuBackdrop.addEventListener('click', () => {

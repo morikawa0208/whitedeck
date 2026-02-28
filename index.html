@@ -817,8 +817,9 @@
         <button onclick="switchPage('battle')" id="nav-battle" class="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-300 transition-all">
             <i class="fas fa-hand-fist text-xl"></i><span class="text-[9px] font-black">戦闘</span>
         </button>
-        <button onclick="switchPage('status')" id="nav-status" class="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-300 transition-all">
+        <button onclick="switchPage('status')" id="nav-status" class="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-300 transition-all relative">
             <i class="fas fa-user-circle text-xl"></i><span class="text-[9px] font-black">能力</span>
+            <span id="nav-status-badge" class="hidden absolute top-1 right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black leading-[18px] text-center shadow">0</span>
         </button>
         <button onclick="switchPage('skill')" id="nav-skill" class="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-300 transition-all relative">
             <i class="fas fa-star text-xl"></i><span class="text-[9px] font-black">スキル</span>
@@ -1833,6 +1834,20 @@
                 });
             };
 
+            const updateStatusNavBadge = () => {
+                const navStatusBadgeEl = document.getElementById('nav-status-badge');
+                if (!navStatusBadgeEl) {
+                    return;
+                }
+                const points = Math.max(0, Math.floor(playerProgressState.statPoints || 0));
+                if (points <= 0) {
+                    navStatusBadgeEl.classList.add('hidden');
+                    return;
+                }
+                navStatusBadgeEl.classList.remove('hidden');
+                navStatusBadgeEl.innerText = points > 99 ? '99+' : String(points);
+            };
+
             const renderStatusSummary = () => {
                 const levelEl = document.getElementById('status-lvl');
                 const expEl = document.getElementById('status-exp');
@@ -1870,6 +1885,7 @@
                     battleExpBarEl.style.width = `${ratio.toFixed(2)}%`;
                 }
                 updateStatAdjustButtonState();
+                updateStatusNavBadge();
             };
 
             const addExperience = (amount) => {

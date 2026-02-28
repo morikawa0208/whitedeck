@@ -3629,9 +3629,43 @@
 
             const AUTO_SLOT_ORDER = Object.freeze(['auto2', 'auto1']);
 
+            const BATTLE_RUNTIME_STATE_KEY = 'battle_runtime_state_v2';
+            const LEGACY_BATTLE_RUNTIME_STATE_KEYS = Object.freeze([
+                'battle_runtime_state_v1',
+                'battle_runtime_state'
+            ]);
+
+            const parsePersistedBattleState = (raw) => {
+                if (!raw) {
+                    return null;
+                }
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== 'object') {
+                    return null;
+                }
+                const loadedFloor = clampFloor(parsed.currentFloor);
+                const loadedCp = Number.isFinite(parsed.playerCp) ? Math.max(0, Math.floor(parsed.playerCp)) : 0;
+                const loadedEnemy = parsed.currentEnemy && parsed.currentEnemy.stats
+                    ? {
+                        ...parsed.currentEnemy,
+                        floor: clampFloor(parsed.currentEnemy.floor || loadedFloor),
+                        tier: toTierFromFloor(parsed.currentEnemy.floor || loadedFloor),
+                        enemyPoolIndex: Number.isFinite(parsed.currentEnemy.enemyPoolIndex) ? Math.max(0, Math.floor(parsed.currentEnemy.enemyPoolIndex)) : 0,
+                        enemyPoolSize: Number.isFinite(parsed.currentEnemy.enemyPoolSize) ? Math.max(1, Math.floor(parsed.currentEnemy.enemyPoolSize)) : 3
+                    }
+                    : null;
+                const loadedEquipmentState = parsed.equipmentState && typeof parsed.equipmentState === 'object' ? parsed.equipmentState : null;
+                return {
+                    currentFloor: loadedFloor,
+                    playerCp: loadedCp,
+                    currentEnemy: loadedEnemy,
+                    equipmentState: loadedEquipmentState
+                };
+            };
+
             const persistBattleState = () => {
                 try {
-                    localStorage.setItem('battle_runtime_state_v2', JSON.stringify({
+                    localStorage.setItem(BATTLE_RUNTIME_STATE_KEY, JSON.stringify({
                         currentFloor: battleState.currentFloor,
                         playerCp: battleState.playerCp,
                         currentEnemy: battleState.currentEnemy,
@@ -3644,32 +3678,22 @@
 
             const loadPersistedBattleState = () => {
                 try {
-                    const raw = localStorage.getItem('battle_runtime_state_v2');
-                    if (!raw) {
-                        return null;
+                    const latestRaw = localStorage.getItem(BATTLE_RUNTIME_STATE_KEY);
+                    const latestParsed = parsePersistedBattleState(latestRaw);
+                    if (latestParsed) {
+                        return latestParsed;
                     }
-                    const parsed = JSON.parse(raw);
-                    if (!parsed || typeof parsed !== 'object') {
-                        return null;
-                    }
-                    const loadedFloor = clampFloor(parsed.currentFloor);
-                    const loadedCp = Number.isFinite(parsed.playerCp) ? Math.max(0, Math.floor(parsed.playerCp)) : 0;
-                    const loadedEnemy = parsed.currentEnemy && parsed.currentEnemy.stats
-                        ? {
-                            ...parsed.currentEnemy,
-                            floor: clampFloor(parsed.currentEnemy.floor || loadedFloor),
-                            tier: toTierFromFloor(parsed.currentEnemy.floor || loadedFloor),
-                            enemyPoolIndex: Number.isFinite(parsed.currentEnemy.enemyPoolIndex) ? Math.max(0, Math.floor(parsed.currentEnemy.enemyPoolIndex)) : 0,
-                            enemyPoolSize: Number.isFinite(parsed.currentEnemy.enemyPoolSize) ? Math.max(1, Math.floor(parsed.currentEnemy.enemyPoolSize)) : 3
+
+                    for (const legacyKey of LEGACY_BATTLE_RUNTIME_STATE_KEYS) {
+                        const legacyParsed = parsePersistedBattleState(localStorage.getItem(legacyKey));
+                        if (!legacyParsed) {
+                            continue;
                         }
-                        : null;
-                    const loadedEquipmentState = parsed.equipmentState && typeof parsed.equipmentState === 'object' ? parsed.equipmentState : null;
-                    return {
-                        currentFloor: loadedFloor,
-                        playerCp: loadedCp,
-                        currentEnemy: loadedEnemy,
-                        equipmentState: loadedEquipmentState
-                    };
+                        localStorage.setItem(BATTLE_RUNTIME_STATE_KEY, JSON.stringify(legacyParsed));
+                        return legacyParsed;
+                    }
+
+                    return null;
                 } catch (e) {
                     return null;
                 }

@@ -2486,6 +2486,21 @@
                 [ITEM_RARITY.legendary]: 1000
             });
 
+            const INVENTORY_SORT_MODES = Object.freeze(['newest', 'oldest', 'rarity']);
+            const INVENTORY_SORT_LABEL = Object.freeze({
+                newest: '入手順',
+                oldest: '古い順',
+                rarity: 'レア度順'
+            });
+            const RARITY_SORT_PRIORITY = Object.freeze({
+                [ITEM_RARITY.normal]: 0,
+                [ITEM_RARITY.magic]: 1,
+                [ITEM_RARITY.rare]: 2,
+                [ITEM_RARITY.epic]: 3,
+                [ITEM_RARITY.legendary]: 4,
+                [ITEM_RARITY.mythic]: 5
+            });
+
             const equipmentState = {
                 inventoryItems: [],
                 equipped: {
@@ -3253,7 +3268,21 @@
                 }
                 const filter = equipmentState.filter;
                 const filtered = equipmentState.inventoryItems.filter((item) => filter === 'all' || item.slot === filter);
-                const ordered = equipmentState.sortOrder === 'newest' ? [...filtered].reverse() : [...filtered];
+                const ordered = (() => {
+                    if (equipmentState.sortOrder === 'newest') {
+                        return [...filtered].reverse();
+                    }
+                    if (equipmentState.sortOrder === 'rarity') {
+                        return [...filtered].sort((a, b) => {
+                            const rarityDelta = (RARITY_SORT_PRIORITY[b.rarity] || 0) - (RARITY_SORT_PRIORITY[a.rarity] || 0);
+                            if (rarityDelta !== 0) {
+                                return rarityDelta;
+                            }
+                            return equipmentState.inventoryItems.indexOf(b) - equipmentState.inventoryItems.indexOf(a);
+                        });
+                    }
+                    return [...filtered];
+                })();
                 list.innerHTML = '';
                 if (!ordered.length) {
                     const empty = document.createElement('div');
@@ -3361,10 +3390,12 @@
             };
 
             const toggleInventorySort = () => {
-                equipmentState.sortOrder = equipmentState.sortOrder === 'newest' ? 'oldest' : 'newest';
+                const currentIndex = Math.max(0, INVENTORY_SORT_MODES.indexOf(equipmentState.sortOrder));
+                const nextIndex = (currentIndex + 1) % INVENTORY_SORT_MODES.length;
+                equipmentState.sortOrder = INVENTORY_SORT_MODES[nextIndex];
                 const sortLabel = document.getElementById('inv-sort-label');
                 if (sortLabel) {
-                    sortLabel.innerText = equipmentState.sortOrder === 'newest' ? '入手順' : '古い順';
+                    sortLabel.innerText = INVENTORY_SORT_LABEL[equipmentState.sortOrder] || INVENTORY_SORT_LABEL.newest;
                 }
                 renderInventory();
             };
@@ -3834,7 +3865,9 @@
                         }
                     });
                     equipmentState.filter = persisted.equipmentState.filter || 'all';
-                    equipmentState.sortOrder = persisted.equipmentState.sortOrder || 'newest';
+                    equipmentState.sortOrder = INVENTORY_SORT_MODES.includes(persisted.equipmentState.sortOrder)
+                        ? persisted.equipmentState.sortOrder
+                        : 'newest';
                 }
                 battleState.playerHp = Math.max(1, Math.floor(getPlayerCombatant().secondaryStats.MaxHP));
                 battleState.playerCp = persisted.playerCp;
@@ -3849,6 +3882,10 @@
                 renderBattleBars();
                 renderAutoSkillDisplays();
                 renderEquipmentSummary();
+                const sortLabel = document.getElementById('inv-sort-label');
+                if (sortLabel) {
+                    sortLabel.innerText = INVENTORY_SORT_LABEL[equipmentState.sortOrder] || INVENTORY_SORT_LABEL.newest;
+                }
                 renderInventory();
                 setInventoryFilter(equipmentState.filter || 'all');
                 return true;

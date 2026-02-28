@@ -966,7 +966,7 @@
                         <button id="equip-slot-1" class="w-full bg-slate-800 text-white font-black py-2 rounded-2xl shadow-lg text-[11px] flex items-center justify-center gap-2">
                             <i class="fas fa-shield"></i>装備
                         </button>
-                        <button id="equip-slot-1-compare" class="w-full bg-white border border-slate-200 text-slate-600 font-black py-2 rounded-2xl shadow text-[11px] flex items-center justify-center gap-2">
+                        <button id="equip-slot-1-compare" class="hidden w-full bg-white border border-slate-200 text-slate-600 font-black py-2 rounded-2xl shadow text-[11px] items-center justify-center gap-2">
                             <i class="fas fa-scale-balanced"></i>比較
                         </button>
                     </div>
@@ -977,7 +977,7 @@
                         <button id="equip-slot-2" class="w-full bg-slate-800 text-white font-black py-2 rounded-2xl shadow-lg text-[11px] flex items-center justify-center gap-2">
                             <i class="fas fa-shield"></i>装備
                         </button>
-                        <button id="equip-slot-2-compare" class="w-full bg-white border border-slate-200 text-slate-600 font-black py-2 rounded-2xl shadow text-[11px] flex items-center justify-center gap-2">
+                        <button id="equip-slot-2-compare" class="hidden w-full bg-white border border-slate-200 text-slate-600 font-black py-2 rounded-2xl shadow text-[11px] items-center justify-center gap-2">
                             <i class="fas fa-scale-balanced"></i>比較
                         </button>
                     </div>
@@ -2477,6 +2477,28 @@
                 sortOrder: 'newest'
             };
 
+            const SELL_PRICE_BY_RARITY = Object.freeze({
+                [ITEM_RARITY.normal]: 25,
+                [ITEM_RARITY.magic]: 90,
+                [ITEM_RARITY.rare]: 260,
+                [ITEM_RARITY.legendary]: 1000
+            });
+
+            const equipmentState = {
+                inventoryItems: [],
+                equipped: {
+                    weapon: null,
+                    armor: null,
+                    head: null,
+                    hands: null,
+                    feet: null,
+                    accessory1: null,
+                    accessory2: null
+                },
+                filter: 'all',
+                sortOrder: 'newest'
+            };
+
             const battleState = {
                 currentFloor: 1,
                 currentEnemy: null,
@@ -2720,6 +2742,120 @@
                 pendingEquipSlotKey: null
             };
 
+            const getEquippedSlotKeyByItemId = (instanceId) => {
+                if (!instanceId) {
+                    return null;
+                }
+                const slots = ['weapon', 'armor', 'head', 'hands', 'feet', 'accessory1', 'accessory2'];
+                for (const slotKey of slots) {
+                    const entry = equipmentState.equipped[slotKey];
+                    if (entry && entry.instanceId === instanceId) {
+                        return slotKey;
+                    }
+                }
+                return null;
+            };
+
+            const isItemEquipped = (instanceId) => Boolean(getEquippedSlotKeyByItemId(instanceId));
+
+            const unequipItemById = (instanceId) => {
+                const slotKey = getEquippedSlotKeyByItemId(instanceId);
+                if (!slotKey) {
+                    return;
+                }
+                equipmentState.equipped[slotKey] = null;
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
+                renderStatusSummary();
+                renderBattleBars();
+                renderEquipmentSummary();
+                renderInventory();
+                persistBattleState();
+            };
+
+            const getSellPrice = (item) => {
+                if (!item) {
+                    return 0;
+                }
+                return Math.max(0, Math.floor(Number(item.sellPrice) || 0));
+            };
+
+            const toggleItemFavorite = (instanceId) => {
+                const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === instanceId);
+                if (!item) {
+                    return;
+                }
+                item.isFavorite = !item.isFavorite;
+                renderInventory();
+                persistBattleState();
+            };
+
+            const sellItemById = (instanceId) => {
+                const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === instanceId);
+                if (!item || item.isFavorite || isItemEquipped(instanceId)) {
+                    return;
+                }
+                playerProgressState.gold = Math.max(0, playerProgressState.gold + getSellPrice(item));
+                equipmentState.inventoryItems = equipmentState.inventoryItems.filter((entry) => entry.instanceId !== instanceId);
+                renderStatusSummary();
+                renderInventory();
+                persistBattleState();
+            };
+
+            const getCompareTargetSlotKey = (item) => {
+                if (!item) {
+                    return null;
+                }
+                if (item.slot === EQUIP_SLOT.accessory) {
+                    if (equipmentState.equipped.accessory1 && equipmentState.equipped.accessory1.instanceId === item.instanceId) {
+                        return 'accessory1';
+                    }
+                    if (equipmentState.equipped.accessory2 && equipmentState.equipped.accessory2.instanceId === item.instanceId) {
+                        return 'accessory2';
+                    }
+                    return equipmentState.equipped.accessory1 ? 'accessory1' : 'accessory2';
+                }
+                return item.slot;
+            };
+
+            const openEnhanceModal = (instanceId) => {
+                const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === instanceId);
+                const modal = document.getElementById('enhance-modal');
+                if (!item || !modal) {
+                    return;
+                }
+                const level = Math.max(0, Math.floor(Number(item.enhanceLevel) || 0));
+                const cost = Math.max(10, Math.floor(getSellPrice(item) * (0.6 + (level * 0.35))));
+                const titleEl = document.getElementById('enhance-modal-title');
+                const levelEl = document.getElementById('enhance-modal-level');
+                const costEl = document.getElementById('enhance-modal-cost');
+                const previewEl = document.getElementById('enhance-modal-preview');
+                const warningEl = document.getElementById('enhance-modal-warning');
+                const infoEl = document.getElementById('enhance-modal-info');
+                const progressEl = document.getElementById('enhance-modal-progress');
+                const resultEl = document.getElementById('enhance-modal-result');
+                if (titleEl) titleEl.innerHTML = `<i class="fas fa-hammer text-slate-500"></i> ${item.name}`;
+                if (levelEl) levelEl.innerText = `+${level}`;
+                if (costEl) costEl.innerText = `${cost}G`;
+                if (previewEl) previewEl.innerText = `次強化で基礎ステータス+3%`;
+                if (warningEl) warningEl.innerText = '強化処理は次ステップで反映予定です。';
+                if (infoEl) infoEl.classList.remove('hidden');
+                if (progressEl) progressEl.classList.add('hidden');
+                if (resultEl) resultEl.classList.add('hidden');
+                modal.dataset.itemId = instanceId;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const closeEnhanceModal = () => {
+                const modal = document.getElementById('enhance-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modal.dataset.itemId = '';
+            };
+
             const summarizeItemStats = (item) => {
                 if (!item) {
                     return 'なし';
@@ -2809,22 +2945,21 @@
                 const slot2Compare = document.getElementById('equip-slot-2-compare');
                 const slot2Card = slot2Label ? slot2Label.closest('.rounded-2xl') : null;
 
+                if (slot1Compare) slot1Compare.classList.add('hidden');
+                if (slot2Compare) slot2Compare.classList.add('hidden');
+
                 if (item.slot === EQUIP_SLOT.accessory) {
                     if (slot2Card) slot2Card.classList.remove('hidden');
                     if (slot1Label) slot1Label.innerText = `装飾品1: ${equipmentState.equipped.accessory1 ? equipmentState.equipped.accessory1.name : 'なし'}`;
                     if (slot2Label) slot2Label.innerText = `装飾品2: ${equipmentState.equipped.accessory2 ? equipmentState.equipped.accessory2.name : 'なし'}`;
                     if (slot1Button) slot1Button.dataset.slotKey = 'accessory1';
                     if (slot2Button) slot2Button.dataset.slotKey = 'accessory2';
-                    if (slot1Compare) slot1Compare.dataset.slotKey = 'accessory1';
-                    if (slot2Compare) slot2Compare.dataset.slotKey = 'accessory2';
                 } else {
                     if (slot2Card) slot2Card.classList.add('hidden');
                     const equipped = equipmentState.equipped[item.slot];
                     if (slot1Label) slot1Label.innerText = `${getSlotLabel(item.slot)}: ${equipped ? equipped.name : 'なし'}`;
                     if (slot1Button) slot1Button.dataset.slotKey = item.slot;
-                    if (slot1Compare) slot1Compare.dataset.slotKey = item.slot;
                     if (slot2Button) slot2Button.dataset.slotKey = '';
-                    if (slot2Compare) slot2Compare.dataset.slotKey = '';
                 }
 
                 modal.classList.remove('hidden');
@@ -2904,22 +3039,83 @@
                     row.className = 'bg-white rounded-xl border p-3 shadow-sm';
                     const affixText = item.affixes.length ? item.affixes.map((affix) => `${affix.label}+${affix.value}`).join(' / ') : 'Affixなし';
                     const uniqueStat = item.finalStats[1] ? `${item.finalStats[1].key}+${item.finalStats[1].value}` : 'なし';
+                    const equippedSlotKey = getEquippedSlotKeyByItemId(item.instanceId);
+                    const isEquipped = Boolean(equippedSlotKey);
+                    const isFavorite = item.isFavorite === true;
+                    const namePrefix = `${isEquipped ? '<span class="text-emerald-600">[E]</span>' : ''}${isFavorite ? '<span class="text-amber-400">☆</span>' : ''}`;
+                    const equipButtonClass = isEquipped
+                        ? 'equip-btn px-2 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-black'
+                        : 'equip-btn px-2 py-1 rounded-lg bg-slate-800 text-white text-[10px] font-black';
+                    const sellDisabled = isEquipped || isFavorite;
+                    const sellText = isEquipped ? '装備中' : (isFavorite ? 'お気に入り中' : `売却 ${getSellPrice(item)}G`);
                     row.innerHTML = `
-                        <div class="flex items-start justify-between gap-2">
+                        <div class="space-y-2">
                             <div class="min-w-0">
-                                <div class="text-[11px] font-black rarity-${item.rarity}"><i class="fas ${item.iconClass}"></i> ${item.name}</div>
+                                <div class="text-[11px] font-black rarity-${item.rarity}"><i class="fas ${item.iconClass}"></i> ${namePrefix}${item.name}</div>
                                 <div class="text-[10px] text-slate-500 font-bold mt-1">${getSlotLabel(item.slot)} / ${item.mainSummary}</div>
                                 <div class="text-[9px] text-slate-400 mt-1">固有: ${uniqueStat}</div>
                                 <div class="text-[9px] text-slate-400 mt-1">${affixText}</div>
                             </div>
-                            <button class="equip-btn px-2 py-1 rounded-lg bg-slate-800 text-white text-[10px] font-black" data-item-id="${item.instanceId}">装備</button>
+                            <div class="grid grid-cols-1 gap-1">
+                                <button class="${equipButtonClass}" data-item-id="${item.instanceId}">${isEquipped ? 'はずす' : '装備'}</button>
+                                <button class="sell-btn px-2 py-1 rounded-lg border text-[10px] font-black ${sellDisabled ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-amber-50 text-amber-700 border-amber-300'}" data-item-id="${item.instanceId}" ${sellDisabled ? 'disabled' : ''}>${sellText}</button>
+                                <button class="favorite-btn px-2 py-1 rounded-lg border text-[10px] font-black ${isFavorite ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-white text-slate-600 border-slate-200'}" data-item-id="${item.instanceId}">${isFavorite ? 'お気に入り解除' : 'お気に入り'}</button>
+                                <button class="enhance-btn px-2 py-1 rounded-lg border text-[10px] font-black bg-indigo-50 text-indigo-700 border-indigo-300" data-item-id="${item.instanceId}">強化</button>
+                                <button class="compare-btn px-2 py-1 rounded-lg border text-[10px] font-black bg-white text-slate-600 border-slate-200" data-item-id="${item.instanceId}">比較</button>
+                            </div>
                         </div>`;
                     list.appendChild(row);
                 });
+
                 list.querySelectorAll('.equip-btn').forEach((button) => {
                     button.addEventListener('click', (event) => {
                         event.preventDefault();
-                        openEquipSlotModalForItem(button.dataset.itemId);
+                        const itemId = button.dataset.itemId;
+                        const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === itemId);
+                        if (!item) {
+                            return;
+                        }
+                        if (isItemEquipped(itemId)) {
+                            unequipItemById(itemId);
+                            return;
+                        }
+                        if (item.slot === EQUIP_SLOT.accessory) {
+                            openEquipSlotModalForItem(itemId);
+                            return;
+                        }
+                        equipItemById(itemId, item.slot);
+                    });
+                });
+
+                list.querySelectorAll('.sell-btn').forEach((button) => {
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        sellItemById(button.dataset.itemId);
+                    });
+                });
+
+                list.querySelectorAll('.favorite-btn').forEach((button) => {
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        toggleItemFavorite(button.dataset.itemId);
+                    });
+                });
+
+                list.querySelectorAll('.enhance-btn').forEach((button) => {
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        openEnhanceModal(button.dataset.itemId);
+                    });
+                });
+
+                list.querySelectorAll('.compare-btn').forEach((button) => {
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === button.dataset.itemId);
+                        if (!item) {
+                            return;
+                        }
+                        openCompareModal({ candidateItem: item, slotKey: getCompareTargetSlotKey(item) });
                     });
                 });
             };
@@ -3661,19 +3857,6 @@
                     }
                 });
 
-                ['equip-slot-1-compare', 'equip-slot-2-compare'].forEach((id) => {
-                    const compareBtn = document.getElementById(id);
-                    if (compareBtn) {
-                        compareBtn.addEventListener('click', (event) => {
-                            event.preventDefault();
-                            const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === equipmentUiState.pendingEquipItemId);
-                            if (!item) {
-                                return;
-                            }
-                            openCompareModal({ candidateItem: item, slotKey: compareBtn.dataset.slotKey || item.slot });
-                        });
-                    }
-                });
 
                 ['compare-modal-close', 'compare-modal-close-bottom'].forEach((id) => {
                     const closeBtn = document.getElementById(id);
@@ -3702,6 +3885,44 @@
                         equipItemById(equipmentUiState.pendingEquipItemId, equipmentUiState.pendingEquipSlotKey || null);
                         closeCompareModal();
                         closeEquipSlotModal();
+                    });
+                }
+
+                ['enhance-modal-close', 'enhance-modal-close-bottom'].forEach((id) => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            closeEnhanceModal();
+                        });
+                    }
+                });
+                const enhanceModal = document.getElementById('enhance-modal');
+                if (enhanceModal) {
+                    enhanceModal.addEventListener('click', (event) => {
+                        if (event.target === enhanceModal) {
+                            closeEnhanceModal();
+                        }
+                    });
+                }
+                const enhanceStartBtn = document.getElementById('enhance-modal-start');
+                if (enhanceStartBtn) {
+                    enhanceStartBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        const warningEl = document.getElementById('enhance-modal-warning');
+                        if (warningEl) {
+                            warningEl.innerText = '強化処理は次ステップで反映予定です。';
+                        }
+                    });
+                }
+                const enhanceRepeatBtn = document.getElementById('enhance-modal-repeat');
+                if (enhanceRepeatBtn) {
+                    enhanceRepeatBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        const itemId = (document.getElementById('enhance-modal') || {}).dataset?.itemId;
+                        if (itemId) {
+                            openEnhanceModal(itemId);
+                        }
                     });
                 }
 

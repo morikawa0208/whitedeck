@@ -261,7 +261,7 @@
             <span class="text-slate-700 text-sm">すきまでハクスラ</span>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">SP: <span id="header-sp">0</span></span>
+            <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Floor: <span id="header-floor">1</span></span>
             <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold"><i class="fas fa-coins"></i> <span id="header-gold">0</span>G</span>
             <div class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded font-bold">Lv.<span id="header-lvl">1</span></div>
         </div>
@@ -286,7 +286,7 @@
                 <div id="enemy-container" class="text-center transition-all duration-300">
                     <div id="enemy-visual" class="text-8xl mb-4 text-slate-700"><i class="fas fa-ghost"></i></div>
                                 <div id="enemy-name" class="font-bold text-lg mb-1">スライム</div>
-                                <div id="enemy-cycle-label" class="text-[10px] font-bold text-slate-500 mb-1">テスト敵 1 / 3</div>
+                                <div id="enemy-cycle-label" class="text-[10px] font-bold text-slate-500 mb-1">Floor 1 出現候補 1 / 3</div>
                 <div id="enemy-boss-badge" class="hidden justify-center mb-2">
                     <span class="boss-badge"><i class="fas fa-crown"></i> BOSS</span>
                 </div>
@@ -1290,7 +1290,8 @@
                 RareDropRateBonus: 'RareDropRateBonus',
                 EnchantSuccessRateBonus: 'EnchantSuccessRateBonus',
                 GoldGainRate: 'GoldGainRate',
-                ExpGainRate: 'ExpGainRate'
+                ExpGainRate: 'ExpGainRate',
+                EliteEncounterRate: 'EliteEncounterRate'
             });
 
             const HitSourceType = Object.freeze({
@@ -1338,7 +1339,8 @@
                     [SecondaryStatKey.RareDropRateBonus]: pickNonNegative(SecondaryStatKey.RareDropRateBonus),
                     [SecondaryStatKey.EnchantSuccessRateBonus]: pickNonNegative(SecondaryStatKey.EnchantSuccessRateBonus),
                     [SecondaryStatKey.GoldGainRate]: pickNonNegative(SecondaryStatKey.GoldGainRate),
-                    [SecondaryStatKey.ExpGainRate]: pickNonNegative(SecondaryStatKey.ExpGainRate)
+                    [SecondaryStatKey.ExpGainRate]: pickNonNegative(SecondaryStatKey.ExpGainRate),
+                    [SecondaryStatKey.EliteEncounterRate]: pickNonNegative(SecondaryStatKey.EliteEncounterRate)
                 };
             };
 
@@ -1400,6 +1402,7 @@
                         [SecondaryStatKey.EnchantSuccessRateBonus]: totalPrimary.LUK * 0.03,
                         [SecondaryStatKey.GoldGainRate]: totalPrimary.LUK * 0.05,
                         [SecondaryStatKey.ExpGainRate]: totalPrimary.LUK * 0.03,
+                        [SecondaryStatKey.EliteEncounterRate]: BASE_ELITE_ENCOUNTER_RATE,
                         [SecondaryStatKey.BonusDamagePercent]: bonus[SecondaryStatKey.BonusDamagePercent],
                         [SecondaryStatKey.BonusDefensePercent]: bonus[SecondaryStatKey.BonusDefensePercent]
                     };
@@ -1419,7 +1422,8 @@
                         [SecondaryStatKey.RareDropRateBonus]: Math.max(0, baseValues[SecondaryStatKey.RareDropRateBonus] + bonus[SecondaryStatKey.RareDropRateBonus]),
                         [SecondaryStatKey.EnchantSuccessRateBonus]: Math.max(0, baseValues[SecondaryStatKey.EnchantSuccessRateBonus] + bonus[SecondaryStatKey.EnchantSuccessRateBonus]),
                         [SecondaryStatKey.GoldGainRate]: Math.max(0, baseValues[SecondaryStatKey.GoldGainRate] + bonus[SecondaryStatKey.GoldGainRate]),
-                        [SecondaryStatKey.ExpGainRate]: Math.max(0, baseValues[SecondaryStatKey.ExpGainRate] + bonus[SecondaryStatKey.ExpGainRate])
+                        [SecondaryStatKey.ExpGainRate]: Math.max(0, baseValues[SecondaryStatKey.ExpGainRate] + bonus[SecondaryStatKey.ExpGainRate]),
+                        [SecondaryStatKey.EliteEncounterRate]: Math.max(0, baseValues[SecondaryStatKey.EliteEncounterRate] + bonus[SecondaryStatKey.EliteEncounterRate])
                     };
 
                     const totalBonusDefensePercent = totalValues[SecondaryStatKey.BonusDefensePercent];
@@ -1440,7 +1444,8 @@
                         [SecondaryStatKey.RareDropRateBonus]: totalValues[SecondaryStatKey.RareDropRateBonus],
                         [SecondaryStatKey.EnchantSuccessRateBonus]: totalValues[SecondaryStatKey.EnchantSuccessRateBonus],
                         [SecondaryStatKey.GoldGainRate]: totalValues[SecondaryStatKey.GoldGainRate],
-                        [SecondaryStatKey.ExpGainRate]: totalValues[SecondaryStatKey.ExpGainRate]
+                        [SecondaryStatKey.ExpGainRate]: totalValues[SecondaryStatKey.ExpGainRate],
+                        [SecondaryStatKey.EliteEncounterRate]: totalValues[SecondaryStatKey.EliteEncounterRate]
                     });
 
                     return {
@@ -1487,6 +1492,7 @@
                         [SecondaryStatKey.EnchantSuccessRateBonus]: asNonNegative(bonusStats[SecondaryStatKey.EnchantSuccessRateBonus]),
                         [SecondaryStatKey.GoldGainRate]: asNonNegative(bonusStats[SecondaryStatKey.GoldGainRate]),
                         [SecondaryStatKey.ExpGainRate]: asNonNegative(bonusStats[SecondaryStatKey.ExpGainRate]),
+                        [SecondaryStatKey.EliteEncounterRate]: asNonNegative(bonusStats[SecondaryStatKey.EliteEncounterRate]),
                         [PrimaryStatKey.STR]: asNonNegative(bonusStats[PrimaryStatKey.STR]),
                         [PrimaryStatKey.INT]: asNonNegative(bonusStats[PrimaryStatKey.INT]),
                         [PrimaryStatKey.VIT]: asNonNegative(bonusStats[PrimaryStatKey.VIT]),
@@ -1785,6 +1791,9 @@
 
             const LEVEL_UP_STAT_POINT_GAIN = 5;
             const MIN_PRIMARY_STAT_VALUE = 1;
+            const BASE_ELITE_ENCOUNTER_RATE = 5;
+            const DEATH_FLOOR_PENALTY = 20;
+            const DEATH_EXP_LOSS_RATE = 0.05;
 
             const playerProgressState = {
                 level: 1,
@@ -1793,7 +1802,8 @@
                 primaryStats: createPrimaryStats(DEFAULT_PRIMARY_STATS)
             };
 
-            const getRequiredExp = (level) => Math.max(1, Math.floor(100 * Math.pow(1.2, Math.max(0, level - 1))));
+            const getRequiredExp = (level) => Math.max(1, Math.floor(80 + Math.pow(Math.max(1, level), 1.45) * 18));
+            const getKillExp = (floorValue) => Math.max(1, Math.floor(14 + clampFloor(floorValue) * 0.55));
 
             const updateStatAdjustButtonState = () => {
                 const buttons = document.querySelectorAll('.stat-adjust-btn');
@@ -1835,6 +1845,19 @@
                 }
                 if (statPointsEl) {
                     statPointsEl.innerText = String(playerProgressState.statPoints);
+                }
+                const headerLevelEl = document.getElementById('header-lvl');
+                if (headerLevelEl) {
+                    headerLevelEl.innerText = String(playerProgressState.level);
+                }
+                const battleExpTextEl = document.getElementById('player-exp-text-battle');
+                if (battleExpTextEl) {
+                    battleExpTextEl.innerText = `${playerProgressState.exp}/${requiredExp}`;
+                }
+                const battleExpBarEl = document.getElementById('player-exp-bar-battle');
+                if (battleExpBarEl) {
+                    const ratio = requiredExp > 0 ? Math.min(100, Math.max(0, (playerProgressState.exp / requiredExp) * 100)) : 0;
+                    battleExpBarEl.style.width = `${ratio.toFixed(2)}%`;
                 }
                 updateStatAdjustButtonState();
             };
@@ -2223,74 +2246,100 @@
                 }
             };
 
-            const TEST_ENEMIES = Object.freeze([
-                {
-                    id: 'e_train_slime',
-                    name: 'Training Slime',
-                    iconClass: 'fa-droplet',
-                    iconColorClass: 'text-emerald-400',
-                    stats: {
-                        maxHp: 90,
-                        physicalAttack: 8,
-                        magicAttack: 0,
-                        defense: 15,
-                        hitRate: 20,
-                        avoidRate: 85,
-                        criticalChance: 0,
-                        bonusDamagePercent: 0,
-                        bonusDefensePercent: 0,
-                        luk: 0
-                    },
-                    ai: {
-                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
+            const MAX_IMPLEMENTED_FLOOR = 500;
+
+            const ENEMY_COMMON_BASE_RANGES = Object.freeze({
+                maxHp: [70, 90],
+                physicalAttack: [8, 10],
+                magicAttack: [0, 0],
+                defense: [11, 13],
+                hitRate: [22, 22],
+                avoidRate: [85, 85],
+                criticalChance: [0, 0],
+                bonusDamagePercent: [0, 0],
+                bonusDefensePercent: [0, 0],
+                luk: [0, 0]
+            });
+
+            const ENEMY_TIER_SCALING = Object.freeze({
+                maxHp: 1.18,
+                physicalAttack: 1.14,
+                magicAttack: 1.14,
+                defense: 1.16,
+                hitRate: 1,
+                avoidRate: 1,
+                criticalChance: 1,
+                bonusDamagePercent: 1,
+                bonusDefensePercent: 1,
+                luk: 1
+            });
+
+            const ENEMY_AFFIX_SCALING = Object.freeze({
+                normal: {
+                    key: 'normal',
+                    label: 'Normal',
+                    statMultipliers: {
+                        maxHp: 1,
+                        physicalAttack: 1,
+                        magicAttack: 1,
+                        defense: 1,
+                        hitRate: 1,
+                        avoidRate: 1,
+                        criticalChance: 1,
+                        bonusDamagePercent: 1,
+                        bonusDefensePercent: 1,
+                        luk: 1
                     }
                 },
-                {
-                    id: 'e_train_wisp',
-                    name: 'Training Wisp',
-                    iconClass: 'fa-wind',
-                    iconColorClass: 'text-cyan-400',
-                    stats: {
-                        maxHp: 75,
-                        physicalAttack: 7,
-                        magicAttack: 0,
-                        defense: 10,
-                        hitRate: 20,
-                        avoidRate: 110,
-                        criticalChance: 0,
-                        bonusDamagePercent: 0,
-                        bonusDefensePercent: 0,
-                        luk: 0
-                    },
-                    ai: {
-                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
-                    }
-                },
-                {
-                    id: 'e_train_golem',
-                    name: 'Training Golem',
-                    iconClass: 'fa-cubes-stacked',
-                    iconColorClass: 'text-slate-500',
-                    stats: {
-                        maxHp: 160,
-                        physicalAttack: 10,
-                        magicAttack: 0,
-                        defense: 80,
-                        hitRate: 20,
-                        avoidRate: 70,
-                        criticalChance: 0,
-                        bonusDamagePercent: 0,
-                        bonusDefensePercent: 0,
-                        luk: 0
-                    },
-                    ai: {
-                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
+                elite: {
+                    key: 'elite',
+                    label: 'Elite',
+                    statMultipliers: {
+                        maxHp: 1.25,
+                        physicalAttack: 1.15,
+                        magicAttack: 1.15,
+                        defense: 1.2,
+                        hitRate: 1,
+                        avoidRate: 1,
+                        criticalChance: 1,
+                        bonusDamagePercent: 1,
+                        bonusDefensePercent: 1,
+                        luk: 1
                     }
                 }
+            });
+
+            const FLOOR_ENEMY_POOLS = Object.freeze([
+                Object.freeze([
+                    { id: 'f001_slime', name: '緑スライム', iconClass: 'fa-droplet', iconColorClass: 'text-emerald-400', statMultipliers: { maxHp: 0.9, defense: 0.9, physicalAttack: 0.95 } },
+                    { id: 'f001_goblin', name: 'ゴブリン斥候', iconClass: 'fa-dagger', iconColorClass: 'text-lime-500', statMultipliers: { maxHp: 1.0, defense: 1.0, physicalAttack: 1.0 } },
+                    { id: 'f001_wolf', name: '灰毛ウルフ', iconClass: 'fa-dog', iconColorClass: 'text-slate-500', statMultipliers: { maxHp: 0.95, defense: 0.9, physicalAttack: 1.1 } }
+                ]),
+                Object.freeze([
+                    { id: 'f101_skeleton', name: '骸骨兵', iconClass: 'fa-skull', iconColorClass: 'text-slate-400', statMultipliers: { maxHp: 1.05, defense: 1.05, physicalAttack: 1.05 } },
+                    { id: 'f101_bat', name: 'ブラッドバット', iconClass: 'fa-bat', iconColorClass: 'text-purple-500', statMultipliers: { maxHp: 0.9, defense: 0.9, physicalAttack: 1.15 } },
+                    { id: 'f101_orc', name: 'オーク戦士', iconClass: 'fa-hammer', iconColorClass: 'text-amber-700', statMultipliers: { maxHp: 1.15, defense: 1.1, physicalAttack: 1.0 } }
+                ]),
+                Object.freeze([
+                    { id: 'f201_gargoyle', name: 'ガーゴイル', iconClass: 'fa-chess-rook', iconColorClass: 'text-stone-500', statMultipliers: { maxHp: 1.1, defense: 1.2, physicalAttack: 0.95 } },
+                    { id: 'f201_lizard', name: 'リザードマン', iconClass: 'fa-dragon', iconColorClass: 'text-teal-500', statMultipliers: { maxHp: 1.0, defense: 1.0, physicalAttack: 1.1 } },
+                    { id: 'f201_bandit', name: '山賊剣士', iconClass: 'fa-user-ninja', iconColorClass: 'text-rose-500', statMultipliers: { maxHp: 0.95, defense: 0.95, physicalAttack: 1.2 } }
+                ]),
+                Object.freeze([
+                    { id: 'f301_dullahan', name: 'デュラハン', iconClass: 'fa-shield', iconColorClass: 'text-indigo-500', statMultipliers: { maxHp: 1.15, defense: 1.1, physicalAttack: 1.1 } },
+                    { id: 'f301_ogre', name: 'オーガ', iconClass: 'fa-dumbbell', iconColorClass: 'text-orange-600', statMultipliers: { maxHp: 1.2, defense: 1.0, physicalAttack: 1.15 } },
+                    { id: 'f301_wraith', name: 'レイス', iconClass: 'fa-ghost', iconColorClass: 'text-cyan-400', statMultipliers: { maxHp: 1.0, defense: 0.95, physicalAttack: 1.2 } }
+                ]),
+                Object.freeze([
+                    { id: 'f401_revenant', name: 'レヴナント', iconClass: 'fa-skull-crossbones', iconColorClass: 'text-red-500', statMultipliers: { maxHp: 1.15, defense: 1.15, physicalAttack: 1.1 } },
+                    { id: 'f401_manticore', name: 'マンティコア幼体', iconClass: 'fa-cat', iconColorClass: 'text-yellow-600', statMultipliers: { maxHp: 1.05, defense: 0.95, physicalAttack: 1.25 } },
+                    { id: 'f401_knight', name: '呪鋼騎士', iconClass: 'fa-shield-halved', iconColorClass: 'text-slate-600', statMultipliers: { maxHp: 1.2, defense: 1.25, physicalAttack: 1.0 } }
+                ])
             ]);
 
             const battleState = {
-                enemyIndex: 0,
+                currentFloor: 1,
+                currentEnemy: null,
                 enemyHp: 0,
                 playerHp: 0,
                 playerCp: 0,
@@ -2298,6 +2347,70 @@
             };
 
             const normalizeDamageType = (damageKind) => (damageKind === 'Magic' ? 'Magical' : 'Physical');
+
+            const clampFloor = (floorValue) => Math.max(1, Math.min(MAX_IMPLEMENTED_FLOOR, Math.floor(Number.isFinite(floorValue) ? floorValue : 1)));
+            const toTierFromFloor = (floorValue) => Math.floor((clampFloor(floorValue) - 1) / 100);
+            const randomIntInclusive = (min, max, rng = Math.random) => {
+                const minValue = Math.floor(Math.min(min, max));
+                const maxValue = Math.floor(Math.max(min, max));
+                if (minValue === maxValue) {
+                    return minValue;
+                }
+                const roll = Math.min(0.999999999, Math.max(0, Number(rng())));
+                return minValue + Math.floor(roll * (maxValue - minValue + 1));
+            };
+
+            const generateEnemyStatsForFloor = ({ floor, archetype, affixKey = 'normal', rng = Math.random }) => {
+                const tier = toTierFromFloor(floor);
+                const affix = ENEMY_AFFIX_SCALING[affixKey] || ENEMY_AFFIX_SCALING.normal;
+                const multipliers = archetype.statMultipliers || {};
+                const pickFinalValue = (key) => {
+                    const [rangeMin, rangeMax] = ENEMY_COMMON_BASE_RANGES[key];
+                    const rolled = randomIntInclusive(rangeMin, rangeMax, rng);
+                    const tierScale = Math.pow(ENEMY_TIER_SCALING[key] || 1, tier);
+                    const archetypeScale = Number.isFinite(multipliers[key]) ? multipliers[key] : 1;
+                    const affixScale = Number.isFinite(affix.statMultipliers[key]) ? affix.statMultipliers[key] : 1;
+                    return Math.max(0, Math.floor(rolled * tierScale * archetypeScale * affixScale));
+                };
+
+                return {
+                    maxHp: Math.max(1, pickFinalValue('maxHp')),
+                    physicalAttack: pickFinalValue('physicalAttack'),
+                    magicAttack: pickFinalValue('magicAttack'),
+                    defense: pickFinalValue('defense'),
+                    hitRate: pickFinalValue('hitRate'),
+                    avoidRate: pickFinalValue('avoidRate'),
+                    criticalChance: pickFinalValue('criticalChance'),
+                    bonusDamagePercent: pickFinalValue('bonusDamagePercent'),
+                    bonusDefensePercent: pickFinalValue('bonusDefensePercent'),
+                    luk: pickFinalValue('luk')
+                };
+            };
+
+            const buildEnemyForFloor = ({ floor, rng = Math.random, forcedEnemyIndex = null, affixKey = 'normal' }) => {
+                const normalizedFloor = clampFloor(floor);
+                const poolIndex = Math.min(FLOOR_ENEMY_POOLS.length - 1, Math.floor((normalizedFloor - 1) / 100));
+                const pool = FLOOR_ENEMY_POOLS[poolIndex];
+                const enemyIndex = Number.isFinite(forcedEnemyIndex)
+                    ? Math.max(0, Math.min(pool.length - 1, Math.floor(forcedEnemyIndex)))
+                    : randomIntInclusive(0, pool.length - 1, rng);
+                const archetype = pool[enemyIndex];
+                return {
+                    id: archetype.id,
+                    name: archetype.name,
+                    iconClass: archetype.iconClass,
+                    iconColorClass: archetype.iconColorClass,
+                    enemyPoolIndex: enemyIndex,
+                    enemyPoolSize: pool.length,
+                    floor: normalizedFloor,
+                    tier: toTierFromFloor(normalizedFloor),
+                    affixKey,
+                    stats: generateEnemyStatsForFloor({ floor: normalizedFloor, archetype, affixKey, rng }),
+                    ai: {
+                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
+                    }
+                };
+            };
 
             const toEnemyCombatant = (enemy) => ({
                 primaryStats: createPrimaryStats({ [PrimaryStatKey.LUK]: enemy.stats.luk }),
@@ -2340,8 +2453,8 @@
             const renderBattleBars = () => {
                 const player = getPlayerCombatant();
                 const playerMaxHp = Math.max(1, Math.floor(player.secondaryStats.MaxHP));
-                const currentEnemy = TEST_ENEMIES[battleState.enemyIndex];
-                const enemyMaxHp = Math.max(1, currentEnemy.stats.maxHp);
+                const currentEnemy = battleState.currentEnemy;
+                const enemyMaxHp = Math.max(1, Math.floor((currentEnemy && currentEnemy.stats && currentEnemy.stats.maxHp) || 1));
 
                 const playerHpText = document.getElementById('player-hp-text');
                 if (playerHpText) {
@@ -2381,7 +2494,14 @@
                 }
                 const enemyCycleLabel = document.getElementById('enemy-cycle-label');
                 if (enemyCycleLabel) {
-                    enemyCycleLabel.innerText = `テスト敵 ${battleState.enemyIndex + 1} / ${TEST_ENEMIES.length}`;
+                    enemyCycleLabel.innerText = currentEnemy
+                        ? `Floor ${battleState.currentFloor} 出現候補 ${currentEnemy.enemyPoolIndex + 1} / ${currentEnemy.enemyPoolSize}`
+                        : `Floor ${battleState.currentFloor} 出現候補 - / 3`;
+                }
+
+                const headerFloor = document.getElementById('header-floor');
+                if (headerFloor) {
+                    headerFloor.innerText = String(battleState.currentFloor);
                 }
 
                 const enemyVisual = document.getElementById('enemy-visual');
@@ -2400,24 +2520,65 @@
             });
 
             const advanceEnemy = () => {
-                battleState.enemyIndex = (battleState.enemyIndex + 1) % TEST_ENEMIES.length;
-                battleState.enemyHp = TEST_ENEMIES[battleState.enemyIndex].stats.maxHp;
-                pushMiniLog(`次の敵: ${TEST_ENEMIES[battleState.enemyIndex].name}`);
+                if (battleState.currentFloor < MAX_IMPLEMENTED_FLOOR) {
+                    battleState.currentFloor += 1;
+                }
+                battleState.currentEnemy = buildEnemyForFloor({ floor: battleState.currentFloor, affixKey: 'normal' });
+                battleState.enemyHp = battleState.currentEnemy.stats.maxHp;
+                pushMiniLog(`次の敵: ${battleState.currentEnemy.name} (Floor ${battleState.currentFloor})`);
+                persistBattleState();
                 renderBattleBars();
+            };
+
+            const showDeathOverlay = ({ lostExp }) => {
+                const overlay = document.getElementById('death-overlay');
+                const lostExpEl = document.getElementById('lost-exp-val');
+                if (lostExpEl) {
+                    lostExpEl.innerText = String(lostExp);
+                }
+                if (overlay) {
+                    overlay.classList.remove('hidden');
+                    overlay.classList.add('flex');
+                }
+            };
+
+            const closeDeathOverlay = () => {
+                const overlay = document.getElementById('death-overlay');
+                if (!overlay) {
+                    return;
+                }
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            };
+
+            const applyDefeatPenalty = () => {
+                const lostExp = Math.floor(playerProgressState.exp * DEATH_EXP_LOSS_RATE);
+                playerProgressState.exp = Math.max(0, playerProgressState.exp - lostExp);
+                battleState.currentFloor = clampFloor(battleState.currentFloor - DEATH_FLOOR_PENALTY);
+                battleState.playerCp = 0;
+                battleState.currentEnemy = buildEnemyForFloor({ floor: battleState.currentFloor, affixKey: 'normal' });
+                battleState.enemyHp = battleState.currentEnemy.stats.maxHp;
+                renderStatusSummary();
+                return { lostExp };
             };
 
             const retryBattle = () => {
                 const player = getPlayerCombatant();
                 battleState.playerHp = Math.max(1, Math.floor(player.secondaryStats.MaxHP));
-                battleState.playerCp = 0;
-                battleState.enemyHp = TEST_ENEMIES[battleState.enemyIndex].stats.maxHp;
-                pushMiniLog('プレイヤー撃破 → CPを0にして即リトライ');
                 renderBattleBars();
                 renderAutoSkillDisplays();
+                persistBattleState();
+            };
+
+            const handlePlayerDefeat = () => {
+                const penaltyResult = applyDefeatPenalty();
+                pushMiniLog(`プレイヤー敗北 → Floor ${battleState.currentFloor} へ撤退 / EXP-${penaltyResult.lostExp}`);
+                showDeathOverlay({ lostExp: penaltyResult.lostExp });
+                retryBattle();
             };
 
             const performEnemyTurn = () => {
-                const enemy = TEST_ENEMIES[battleState.enemyIndex];
+                const enemy = battleState.currentEnemy;
                 const enemyCombatant = toEnemyCombatant(enemy);
                 const playerCombatant = getPlayerCombatant();
                 const attackDefinition = createAttackDefinitionFromAi(enemy.ai.defaultAttack);
@@ -2451,7 +2612,7 @@
                 });
 
                 if (battleState.playerHp <= 0) {
-                    retryBattle();
+                    handlePlayerDefeat();
                     return;
                 }
 
@@ -2497,24 +2658,46 @@
 
             const AUTO_SLOT_ORDER = Object.freeze(['auto2', 'auto1']);
 
-            const persistBattleCp = () => {
+            const persistBattleState = () => {
                 try {
-                    localStorage.setItem('battle_cp_state_v1', JSON.stringify({ playerCp: battleState.playerCp }));
+                    localStorage.setItem('battle_runtime_state_v2', JSON.stringify({
+                        currentFloor: battleState.currentFloor,
+                        playerCp: battleState.playerCp,
+                        currentEnemy: battleState.currentEnemy
+                    }));
                 } catch (e) {
                     // noop
                 }
             };
 
-            const loadPersistedBattleCp = () => {
+            const loadPersistedBattleState = () => {
                 try {
-                    const raw = localStorage.getItem('battle_cp_state_v1');
+                    const raw = localStorage.getItem('battle_runtime_state_v2');
                     if (!raw) {
-                        return 0;
+                        return null;
                     }
                     const parsed = JSON.parse(raw);
-                    return Number.isFinite(parsed.playerCp) ? Math.max(0, Math.floor(parsed.playerCp)) : 0;
+                    if (!parsed || typeof parsed !== 'object') {
+                        return null;
+                    }
+                    const loadedFloor = clampFloor(parsed.currentFloor);
+                    const loadedCp = Number.isFinite(parsed.playerCp) ? Math.max(0, Math.floor(parsed.playerCp)) : 0;
+                    const loadedEnemy = parsed.currentEnemy && parsed.currentEnemy.stats
+                        ? {
+                            ...parsed.currentEnemy,
+                            floor: clampFloor(parsed.currentEnemy.floor || loadedFloor),
+                            tier: toTierFromFloor(parsed.currentEnemy.floor || loadedFloor),
+                            enemyPoolIndex: Number.isFinite(parsed.currentEnemy.enemyPoolIndex) ? Math.max(0, Math.floor(parsed.currentEnemy.enemyPoolIndex)) : 0,
+                            enemyPoolSize: Number.isFinite(parsed.currentEnemy.enemyPoolSize) ? Math.max(1, Math.floor(parsed.currentEnemy.enemyPoolSize)) : 3
+                        }
+                        : null;
+                    return {
+                        currentFloor: loadedFloor,
+                        playerCp: loadedCp,
+                        currentEnemy: loadedEnemy
+                    };
                 } catch (e) {
-                    return 0;
+                    return null;
                 }
             };
 
@@ -2569,7 +2752,7 @@
             });
 
             const executePlayerSkill = ({ skill, sourceLabel, slotKey }) => {
-                const enemy = TEST_ENEMIES[battleState.enemyIndex];
+                const enemy = battleState.currentEnemy;
                 const enemyCombatant = toEnemyCombatant(enemy);
                 const playerCombatant = getPlayerCombatant();
                 const attackDefinition = resolveSkillAttackDefinition(skill.damageType);
@@ -2626,12 +2809,14 @@
                     autoSlotState[slotKey].remainingCooldown = Math.max(0, Math.floor(skill.cooldownTurns));
                 }
 
-                persistBattleCp();
+                persistBattleState();
                 renderBattleBars();
                 renderAutoSkillDisplays();
 
                 if (battleState.enemyHp <= 0) {
-                    pushMiniLog(`${enemy.name} を撃破`);
+                    const killExp = getKillExp(battleState.currentFloor);
+                    addExperience(killExp);
+                    pushMiniLog(`${enemy.name} を撃破 / EXP +${killExp}`);
                     advanceEnemy();
                     return;
                 }
@@ -2666,21 +2851,26 @@
                 }
 
                 pushMiniLog('CPが足りず自動スキルを発動できないためターン進行なし');
-                persistBattleCp();
+                persistBattleState();
                 renderBattleBars();
                 renderAutoSkillDisplays();
             };
 
             const initializeBattleSimulation = () => {
-                battleState.enemyIndex = 0;
-                battleState.enemyHp = TEST_ENEMIES[0].stats.maxHp;
+                const persisted = loadPersistedBattleState();
+                battleState.currentFloor = persisted ? persisted.currentFloor : 1;
+                battleState.currentEnemy = persisted && persisted.currentEnemy
+                    ? persisted.currentEnemy
+                    : buildEnemyForFloor({ floor: battleState.currentFloor, affixKey: 'normal' });
+                battleState.enemyHp = battleState.currentEnemy.stats.maxHp;
                 battleState.playerHp = Math.max(1, Math.floor(getPlayerCombatant().secondaryStats.MaxHP));
-                battleState.playerCp = loadPersistedBattleCp();
+                battleState.playerCp = persisted ? persisted.playerCp : 0;
                 battleState.miniLogs = [];
                 setAutoSlot1NormalAttackSkill(autoSlotState.auto1.skillId || 'auto_basic_attack_physical');
                 autoSlotState.auto1.remainingCooldown = 0;
                 autoSlotState.auto2.remainingCooldown = 0;
-                pushMiniLog('テスト戦闘開始: Training Slime');
+                pushMiniLog(`戦闘開始: ${battleState.currentEnemy.name} (Floor ${battleState.currentFloor})`);
+                persistBattleState();
                 renderBattleBars();
                 renderAutoSkillDisplays();
             };
@@ -2798,6 +2988,9 @@
                 closeBottomMenu();
                 switchPage('feedback');
             };
+            window.revive = () => {
+                closeDeathOverlay();
+            };
             window.openDonateModal = noop;
             window.closeDonateModal = noop;
             window.purchaseTip = noop;
@@ -2809,6 +3002,7 @@
                 renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats });
                 renderStatusSummary();
                 initializeBattleSimulation();
+                closeDeathOverlay();
                 switchPage('status');
 
                 const secondaryBreakdownBtn = document.getElementById('secondary-breakdown-btn');

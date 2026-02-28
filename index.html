@@ -74,8 +74,16 @@
             white-space: nowrap;
             max-width: 100%;
         }
+        .damage-text-popup-label {
+            display: block;
+            font-size: 0.7rem;
+            line-height: 1;
+            margin-bottom: 2px;
+            letter-spacing: 0.03em;
+        }
         #damage-layer {
             overflow: hidden;
+            z-index: 90;
         }
 
         .mini-log {
@@ -316,7 +324,7 @@
             <!-- Player Status Section -->
             <div class="bg-white border rounded-2xl p-4 shadow-sm space-y-3 mb-2">
                 <div class="space-y-1.5">
-                    <div class="bar-container">
+                    <div id="player-hp-bar-container" class="bar-container">
                         <div id="player-hp-bar" class="bar-fill hp-fill"></div>
                         <div class="bar-text">HP: <span id="player-hp-text">100/100</span></div>
                     </div>
@@ -1787,6 +1795,20 @@
             const BASE_ELITE_ENCOUNTER_RATE = 5;
             const DEATH_FLOOR_PENALTY = 20;
             const DEATH_EXP_LOSS_RATE = 0.05;
+            const GUARD_POPUP_THRESHOLD = 0.45;
+
+            const BATTLE_POPUP_STYLE = Object.freeze({
+                physical: { color: '#ffffff', strokeColor: 'rgba(51, 65, 85, 0.55)' },
+                magical: { color: '#facc15' },
+                critical: { color: '#ef4444', label: 'Critical!' },
+                doubleCritical: { color: '#ef4444', label: 'Double!' },
+                heal: { color: '#22c55e', prefix: '+' },
+                miss: { color: '#94a3b8', text: 'MISS' },
+                guard: { color: '#38bdf8', text: 'Guard' },
+                drain: { color: '#a855f7', label: 'Drain', prefix: '+' },
+                exp: { color: '#38bdf8', prefix: 'EXP +' },
+                levelUp: { color: '#fbbf24', text: 'Level Up!' }
+            });
 
             const playerProgressState = {
                 level: 1,
@@ -1857,16 +1879,19 @@
 
             const addExperience = (amount) => {
                 if (!Number.isFinite(amount) || amount <= 0) {
-                    return;
+                    return { leveledUpCount: 0 };
                 }
+                let leveledUpCount = 0;
                 playerProgressState.exp += Math.floor(amount);
                 while (playerProgressState.exp >= getRequiredExp(playerProgressState.level)) {
                     const required = getRequiredExp(playerProgressState.level);
                     playerProgressState.exp -= required;
                     playerProgressState.level += 1;
                     playerProgressState.statPoints += LEVEL_UP_STAT_POINT_GAIN;
+                    leveledUpCount += 1;
                 }
                 renderStatusSummary();
+                return { leveledUpCount };
             };
 
             const changePrimaryStat = (statKey, delta) => {
@@ -3349,6 +3374,73 @@
                 }
             };
 
+            const getPopupAnchor = ({ target = 'enemy', layer }) => {
+                if (target !== 'playerHpBar') {
+                    return { leftPercent: 50, topPercent: 34 };
+                }
+                const anchor = document.getElementById('player-hp-bar-container');
+                if (!anchor || !layer) {
+                    return { leftPercent: 50, topPercent: 78 };
+                }
+                const layerRect = layer.getBoundingClientRect();
+                const anchorRect = anchor.getBoundingClientRect();
+                if (layerRect.width <= 0 || layerRect.height <= 0) {
+                    return { leftPercent: 50, topPercent: 78 };
+                }
+                const anchorCenterX = anchorRect.left + (anchorRect.width / 2);
+                const anchorCenterY = anchorRect.top + (anchorRect.height / 2);
+                const leftPercent = ((anchorCenterX - layerRect.left) / layerRect.width) * 100;
+                const topPercent = ((anchorCenterY - layerRect.top) / layerRect.height) * 100;
+                return {
+                    leftPercent: Math.max(0, Math.min(100, leftPercent)),
+                    topPercent: Math.max(0, Math.min(100, topPercent))
+                };
+            };
+
+            const showBattlePopup = ({
+                kind = 'physical',
+                value = '',
+                target = 'enemy',
+                offsetX = null,
+                offsetY = null
+            } = {}) => {
+                const layer = document.getElementById('damage-layer');
+                if (!layer) {
+                    return;
+                }
+
+                const styleDef = BATTLE_POPUP_STYLE[kind] || BATTLE_POPUP_STYLE.physical;
+                const textEl = document.createElement('div');
+                textEl.className = 'damage-text';
+                textEl.style.color = styleDef.color;
+                if (styleDef.strokeColor) {
+                    textEl.style.webkitTextStroke = `1px ${styleDef.strokeColor}`;
+                    textEl.style.paintOrder = 'stroke fill';
+                }
+                const anchor = getPopupAnchor({ target, layer });
+                const randomX = Number.isFinite(offsetX) ? offsetX : (Math.random() * 56) - 28;
+                const randomY = Number.isFinite(offsetY) ? offsetY : (Math.random() * 20) - 10;
+
+                textEl.style.left = `${anchor.leftPercent}%`;
+                textEl.style.top = `${anchor.topPercent}%`;
+                textEl.style.setProperty('--offset-x', `${randomX}px`);
+                textEl.style.setProperty('--offset-y', `${randomY}px`);
+
+                const amountText = styleDef.text || `${styleDef.prefix || ''}${value}`;
+                if (styleDef.label) {
+                    const labelEl = document.createElement('span');
+                    labelEl.className = 'damage-text-popup-label';
+                    labelEl.innerText = styleDef.label;
+                    textEl.appendChild(labelEl);
+                }
+                textEl.appendChild(document.createTextNode(amountText));
+
+                layer.appendChild(textEl);
+                textEl.addEventListener('animationend', () => {
+                    textEl.remove();
+                }, { once: true });
+            };
+
             const renderBattleBars = () => {
                 const player = getPlayerCombatant();
                 const playerMaxHp = Math.max(1, Math.floor(player.secondaryStats.MaxHP));
@@ -3493,6 +3585,7 @@
 
                 hitResults.forEach((hit, index) => {
                     if (!hit.isHit) {
+                        showBattlePopup({ kind: 'miss', target: 'playerHpBar' });
                         pushMiniLog(`敵攻撃${index + 1}: 物理 MISS (命中率 ${hit.hitChancePercent.toFixed(2)}%)`);
                         return;
                     }
@@ -3505,6 +3598,11 @@
                         critTier: CritTier.None
                     });
                     battleState.playerHp = Math.max(0, battleState.playerHp - damage.finalDamage);
+                    showBattlePopup({ kind: 'physical', value: damage.finalDamage, target: 'playerHpBar' });
+                    const guardRatio = damage.attackPart > 0 ? (damage.reducedDamage / damage.attackPart) : 1;
+                    if (guardRatio <= GUARD_POPUP_THRESHOLD) {
+                        showBattlePopup({ kind: 'guard', target: 'playerHpBar', offsetY: 14 });
+                    }
                     pushMiniLog(
                         `敵攻撃${index + 1}: 物理 HIT ${damage.finalDamage} (命中率 ${hit.hitChancePercent.toFixed(2)}% / 軽減前 ${damage.attackPart.toFixed(2)} → 軽減後 ${damage.reducedDamage.toFixed(2)})`
                     );
@@ -3670,6 +3768,7 @@
                 let totalCpGain = 0;
                 hitResults.forEach((hit, index) => {
                     if (!hit.isHit) {
+                        showBattlePopup({ kind: 'miss', target: 'enemy' });
                         pushMiniLog(`${sourceLabel}${index + 1}: ${skill.damageType === 'Magical' ? '魔法' : '物理'} MISS (命中率 ${hit.hitChancePercent.toFixed(2)}%)`);
                         return;
                     }
@@ -3690,6 +3789,16 @@
                         });
 
                     battleState.enemyHp = Math.max(0, battleState.enemyHp - damage.finalDamage);
+                    const popupKind = skill.damageType === 'Magical'
+                        ? 'magical'
+                        : (hit.critTier === CritTier.DoubleCritical
+                            ? 'doubleCritical'
+                            : (hit.critTier === CritTier.Critical ? 'critical' : 'physical'));
+                    showBattlePopup({ kind: popupKind, value: damage.finalDamage, target: 'enemy' });
+                    const guardRatio = damage.attackPart > 0 ? (damage.reducedDamage / damage.attackPart) : 1;
+                    if (guardRatio <= GUARD_POPUP_THRESHOLD) {
+                        showBattlePopup({ kind: 'guard', target: 'enemy', offsetY: 14 });
+                    }
                     const critLabel = skill.damageType === 'Magical'
                         ? ' / 非クリ'
                         : (hit.critTier === CritTier.DoubleCritical
@@ -3717,7 +3826,11 @@
 
                 if (battleState.enemyHp <= 0) {
                     const killExp = getKillExp(battleState.currentFloor);
-                    addExperience(killExp);
+                    showBattlePopup({ kind: 'exp', value: killExp, target: 'enemy' });
+                    const expResult = addExperience(killExp);
+                    if (expResult.leveledUpCount > 0) {
+                        showBattlePopup({ kind: 'levelUp', target: 'playerHpBar' });
+                    }
                     pushMiniLog(`${enemy.name} を撃破 / EXP +${killExp}`);
                     const dropItem = attemptEquipmentDrop({
                         floor: battleState.currentFloor,

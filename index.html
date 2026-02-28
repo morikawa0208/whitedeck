@@ -2447,7 +2447,29 @@
                         { id: 'x_t5_ring', slot: EQUIP_SLOT.accessory, name: '覇者の指輪', iconClass: 'fa-ring', mainStatKey: SecondaryStatKey.ExpGainRate, mainStatMin: 9, mainStatMax: 20, uniqueStatKey: PrimaryStatKey.LUK, uniqueMin: 14, uniqueMax: 20 }
                     ]
                 }
-            ]);
+             ]);
+
+            const SELL_PRICE_BY_RARITY = Object.freeze({
+                [ITEM_RARITY.normal]: 25,
+                [ITEM_RARITY.magic]: 90,
+                [ITEM_RARITY.rare]: 260,
+                [ITEM_RARITY.legendary]: 1000
+            });
+
+            const equipmentState = {
+                inventoryItems: [],
+                equipped: {
+                    weapon: null,
+                    armor: null,
+                    head: null,
+                    hands: null,
+                    feet: null,
+                    accessory1: null,
+                    accessory2: null
+                },
+                filter: 'all',
+                sortOrder: 'newest'
+            };
 
             const SELL_PRICE_BY_RARITY = Object.freeze({
                 [ITEM_RARITY.normal]: 25,

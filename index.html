@@ -2477,6 +2477,28 @@
                 sortOrder: 'newest'
             };
 
+            const SELL_PRICE_BY_RARITY = Object.freeze({
+                [ITEM_RARITY.normal]: 25,
+                [ITEM_RARITY.magic]: 90,
+                [ITEM_RARITY.rare]: 260,
+                [ITEM_RARITY.legendary]: 1000
+            });
+
+            const equipmentState = {
+                inventoryItems: [],
+                equipped: {
+                    weapon: null,
+                    armor: null,
+                    head: null,
+                    hands: null,
+                    feet: null,
+                    accessory1: null,
+                    accessory2: null
+                },
+                filter: 'all',
+                sortOrder: 'newest'
+            };
+
             const battleState = {
                 currentFloor: 1,
                 currentEnemy: null,
@@ -2715,13 +2737,127 @@
                 return '装備';
             };
 
-            const equipItemById = (instanceId) => {
+            const equipmentUiState = {
+                pendingEquipItemId: null,
+                pendingEquipSlotKey: null
+            };
+
+            const summarizeItemStats = (item) => {
+                if (!item) {
+                    return 'なし';
+                }
+                const summary = (item.finalStats || []).slice(0, 3).map((stat) => `${stat.key}+${stat.value}`).join(' / ');
+                return summary || '補正なし';
+            };
+
+            const closeEquipSlotModal = () => {
+                const modal = document.getElementById('equip-slot-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                equipmentUiState.pendingEquipItemId = null;
+                equipmentUiState.pendingEquipSlotKey = null;
+            };
+
+            const closeCompareModal = () => {
+                const modal = document.getElementById('compare-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                equipmentUiState.pendingEquipSlotKey = null;
+            };
+
+            const openCompareModal = ({ candidateItem, slotKey }) => {
+                const modal = document.getElementById('compare-modal');
+                if (!modal || !candidateItem) {
+                    return;
+                }
+                const equippedItem = equipmentState.equipped[slotKey] || null;
+                const equippedName = document.getElementById('compare-modal-equipped');
+                const candidateName = document.getElementById('compare-modal-candidate');
+                if (equippedName) equippedName.innerText = equippedItem ? equippedItem.name : 'なし';
+                if (candidateName) candidateName.innerText = candidateItem.name;
+
+                const equippedMap = {};
+                (equippedItem?.finalStats || []).forEach((stat) => {
+                    equippedMap[stat.key] = (equippedMap[stat.key] || 0) + stat.value;
+                });
+                const candidateMap = {};
+                (candidateItem.finalStats || []).forEach((stat) => {
+                    candidateMap[stat.key] = (candidateMap[stat.key] || 0) + stat.value;
+                });
+
+                const increase = [];
+                const decrease = [];
+                const keys = new Set([...Object.keys(equippedMap), ...Object.keys(candidateMap)]);
+                keys.forEach((key) => {
+                    const diff = Math.floor((candidateMap[key] || 0) - (equippedMap[key] || 0));
+                    if (diff > 0) increase.push(`${key} +${diff}`);
+                    if (diff < 0) decrease.push(`${key} ${diff}`);
+                });
+
+                const incEl = document.getElementById('compare-modal-increase');
+                const decEl = document.getElementById('compare-modal-decrease');
+                if (incEl) incEl.innerHTML = increase.length ? increase.map((line) => `<div class="text-[10px] text-emerald-600 font-bold">${line}</div>`).join('') : '<div class="text-[10px] text-slate-400">なし</div>';
+                if (decEl) decEl.innerHTML = decrease.length ? decrease.map((line) => `<div class="text-[10px] text-rose-600 font-bold">${line}</div>`).join('') : '<div class="text-[10px] text-slate-400">なし</div>';
+
+                equipmentUiState.pendingEquipItemId = candidateItem.instanceId;
+                equipmentUiState.pendingEquipSlotKey = slotKey;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const openEquipSlotModalForItem = (instanceId) => {
+                const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === instanceId);
+                const modal = document.getElementById('equip-slot-modal');
+                if (!item || !modal) {
+                    return;
+                }
+                equipmentUiState.pendingEquipItemId = instanceId;
+                const title = document.getElementById('equip-slot-title');
+                if (title) title.innerText = `${item.name} を装備`;
+
+                const slot1Label = document.getElementById('equip-slot-1-label');
+                const slot2Label = document.getElementById('equip-slot-2-label');
+                const slot1Button = document.getElementById('equip-slot-1');
+                const slot2Button = document.getElementById('equip-slot-2');
+                const slot1Compare = document.getElementById('equip-slot-1-compare');
+                const slot2Compare = document.getElementById('equip-slot-2-compare');
+                const slot2Card = slot2Label ? slot2Label.closest('.rounded-2xl') : null;
+
+                if (item.slot === EQUIP_SLOT.accessory) {
+                    if (slot2Card) slot2Card.classList.remove('hidden');
+                    if (slot1Label) slot1Label.innerText = `装飾品1: ${equipmentState.equipped.accessory1 ? equipmentState.equipped.accessory1.name : 'なし'}`;
+                    if (slot2Label) slot2Label.innerText = `装飾品2: ${equipmentState.equipped.accessory2 ? equipmentState.equipped.accessory2.name : 'なし'}`;
+                    if (slot1Button) slot1Button.dataset.slotKey = 'accessory1';
+                    if (slot2Button) slot2Button.dataset.slotKey = 'accessory2';
+                    if (slot1Compare) slot1Compare.dataset.slotKey = 'accessory1';
+                    if (slot2Compare) slot2Compare.dataset.slotKey = 'accessory2';
+                } else {
+                    if (slot2Card) slot2Card.classList.add('hidden');
+                    const equipped = equipmentState.equipped[item.slot];
+                    if (slot1Label) slot1Label.innerText = `${getSlotLabel(item.slot)}: ${equipped ? equipped.name : 'なし'}`;
+                    if (slot1Button) slot1Button.dataset.slotKey = item.slot;
+                    if (slot1Compare) slot1Compare.dataset.slotKey = item.slot;
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const equipItemById = (instanceId, slotOverride = null) => {
                 const targetItem = equipmentState.inventoryItems.find((item) => item.instanceId === instanceId);
                 if (!targetItem) {
                     return;
                 }
                 if (targetItem.slot === EQUIP_SLOT.accessory) {
-                    if (!equipmentState.equipped.accessory1) {
+                    if (slotOverride === 'accessory1' || slotOverride === 'accessory2') {
+                        equipmentState.equipped[slotOverride] = targetItem;
+                    } else if (!equipmentState.equipped.accessory1) {
                         equipmentState.equipped.accessory1 = targetItem;
                     } else if (!equipmentState.equipped.accessory2) {
                         equipmentState.equipped.accessory2 = targetItem;
@@ -2732,25 +2868,31 @@
                     equipmentState.equipped[targetItem.slot] = targetItem;
                 }
                 renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
+                renderStatusSummary();
                 renderBattleBars();
                 renderEquipmentSummary();
+                renderInventory();
                 persistBattleState();
             };
 
             const renderEquipmentSummary = () => {
                 const map = [
-                    ['equip-weapon', equipmentState.equipped.weapon],
-                    ['equip-armor', equipmentState.equipped.armor],
-                    ['equip-head', equipmentState.equipped.head],
-                    ['equip-hands', equipmentState.equipped.hands],
-                    ['equip-feet', equipmentState.equipped.feet],
-                    ['equip-accessory1', equipmentState.equipped.accessory1],
-                    ['equip-accessory2', equipmentState.equipped.accessory2]
+                    ['equip-weapon', 'weapon-val', equipmentState.equipped.weapon],
+                    ['equip-armor', 'armor-val', equipmentState.equipped.armor],
+                    ['equip-head', 'head-val', equipmentState.equipped.head],
+                    ['equip-hands', 'hands-val', equipmentState.equipped.hands],
+                    ['equip-feet', 'feet-val', equipmentState.equipped.feet],
+                    ['equip-accessory1', 'accessory1-val', equipmentState.equipped.accessory1],
+                    ['equip-accessory2', 'accessory2-val', equipmentState.equipped.accessory2]
                 ];
-                map.forEach(([id, item]) => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.textContent = item ? item.name : 'なし';
+                map.forEach(([nameId, valueId, item]) => {
+                    const nameEl = document.getElementById(nameId);
+                    const valueEl = document.getElementById(valueId);
+                    if (nameEl) {
+                        nameEl.textContent = item ? item.name : 'なし';
+                    }
+                    if (valueEl) {
+                        valueEl.innerText = item ? summarizeItemStats(item) : '';
                     }
                 });
             };
@@ -2794,7 +2936,7 @@
                 list.querySelectorAll('.equip-btn').forEach((button) => {
                     button.addEventListener('click', (event) => {
                         event.preventDefault();
-                        equipItemById(button.dataset.itemId);
+                        openEquipSlotModalForItem(button.dataset.itemId);
                     });
                 });
             };
@@ -3272,6 +3414,8 @@
                 autoSlotState.auto2.remainingCooldown = 0;
                 pushMiniLog(`戦闘開始: ${battleState.currentEnemy.name} (Floor ${battleState.currentFloor})`);
                 persistBattleState();
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
+                renderStatusSummary();
                 renderBattleBars();
                 renderAutoSkillDisplays();
                 renderEquipmentSummary();
@@ -3501,6 +3645,82 @@
                         });
                     }
                 });
+
+                const equipSlotModal = document.getElementById('equip-slot-modal');
+                ['equip-slot-close', 'equip-slot-close-bottom'].forEach((id) => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            closeEquipSlotModal();
+                        });
+                    }
+                });
+                if (equipSlotModal) {
+                    equipSlotModal.addEventListener('click', (event) => {
+                        if (event.target === equipSlotModal) {
+                            closeEquipSlotModal();
+                        }
+                    });
+                }
+
+                ['equip-slot-1', 'equip-slot-2'].forEach((id) => {
+                    const equipBtn = document.getElementById(id);
+                    if (equipBtn) {
+                        equipBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (!equipmentUiState.pendingEquipItemId) {
+                                return;
+                            }
+                            equipItemById(equipmentUiState.pendingEquipItemId, equipBtn.dataset.slotKey || null);
+                            closeEquipSlotModal();
+                        });
+                    }
+                });
+
+                ['equip-slot-1-compare', 'equip-slot-2-compare'].forEach((id) => {
+                    const compareBtn = document.getElementById(id);
+                    if (compareBtn) {
+                        compareBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === equipmentUiState.pendingEquipItemId);
+                            if (!item) {
+                                return;
+                            }
+                            openCompareModal({ candidateItem: item, slotKey: compareBtn.dataset.slotKey || item.slot });
+                        });
+                    }
+                });
+
+                ['compare-modal-close', 'compare-modal-close-bottom'].forEach((id) => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            closeCompareModal();
+                        });
+                    }
+                });
+                const compareModal = document.getElementById('compare-modal');
+                if (compareModal) {
+                    compareModal.addEventListener('click', (event) => {
+                        if (event.target === compareModal) {
+                            closeCompareModal();
+                        }
+                    });
+                }
+                const compareEquipBtn = document.getElementById('compare-modal-equip');
+                if (compareEquipBtn) {
+                    compareEquipBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        if (!equipmentUiState.pendingEquipItemId) {
+                            return;
+                        }
+                        equipItemById(equipmentUiState.pendingEquipItemId, equipmentUiState.pendingEquipSlotKey || null);
+                        closeCompareModal();
+                        closeEquipSlotModal();
+                    });
+                }
 
                 const warpModal = document.getElementById('warp-modal');
                 const warpBtn = document.getElementById('warp-btn');

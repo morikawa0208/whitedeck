@@ -261,7 +261,7 @@
             <span class="text-slate-700 text-sm">すきまでハクスラ</span>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">SP: <span id="header-sp">0</span></span>
+            <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Floor: <span id="header-floor">1</span></span>
             <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold"><i class="fas fa-coins"></i> <span id="header-gold">0</span>G</span>
             <div class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded font-bold">Lv.<span id="header-lvl">1</span></div>
         </div>
@@ -286,7 +286,7 @@
                 <div id="enemy-container" class="text-center transition-all duration-300">
                     <div id="enemy-visual" class="text-8xl mb-4 text-slate-700"><i class="fas fa-ghost"></i></div>
                                 <div id="enemy-name" class="font-bold text-lg mb-1">スライム</div>
-                                <div id="enemy-cycle-label" class="text-[10px] font-bold text-slate-500 mb-1">テスト敵 1 / 3</div>
+                                <div id="enemy-cycle-label" class="text-[10px] font-bold text-slate-500 mb-1">Floor 1 出現候補 1 / 3</div>
                 <div id="enemy-boss-badge" class="hidden justify-center mb-2">
                     <span class="boss-badge"><i class="fas fa-crown"></i> BOSS</span>
                 </div>
@@ -1290,7 +1290,8 @@
                 RareDropRateBonus: 'RareDropRateBonus',
                 EnchantSuccessRateBonus: 'EnchantSuccessRateBonus',
                 GoldGainRate: 'GoldGainRate',
-                ExpGainRate: 'ExpGainRate'
+                ExpGainRate: 'ExpGainRate',
+                EliteEncounterRate: 'EliteEncounterRate'
             });
 
             const HitSourceType = Object.freeze({
@@ -1338,7 +1339,8 @@
                     [SecondaryStatKey.RareDropRateBonus]: pickNonNegative(SecondaryStatKey.RareDropRateBonus),
                     [SecondaryStatKey.EnchantSuccessRateBonus]: pickNonNegative(SecondaryStatKey.EnchantSuccessRateBonus),
                     [SecondaryStatKey.GoldGainRate]: pickNonNegative(SecondaryStatKey.GoldGainRate),
-                    [SecondaryStatKey.ExpGainRate]: pickNonNegative(SecondaryStatKey.ExpGainRate)
+                    [SecondaryStatKey.ExpGainRate]: pickNonNegative(SecondaryStatKey.ExpGainRate),
+                    [SecondaryStatKey.EliteEncounterRate]: pickNonNegative(SecondaryStatKey.EliteEncounterRate)
                 };
             };
 
@@ -1400,6 +1402,7 @@
                         [SecondaryStatKey.EnchantSuccessRateBonus]: totalPrimary.LUK * 0.03,
                         [SecondaryStatKey.GoldGainRate]: totalPrimary.LUK * 0.05,
                         [SecondaryStatKey.ExpGainRate]: totalPrimary.LUK * 0.03,
+                        [SecondaryStatKey.EliteEncounterRate]: BASE_ELITE_ENCOUNTER_RATE,
                         [SecondaryStatKey.BonusDamagePercent]: bonus[SecondaryStatKey.BonusDamagePercent],
                         [SecondaryStatKey.BonusDefensePercent]: bonus[SecondaryStatKey.BonusDefensePercent]
                     };
@@ -1419,7 +1422,8 @@
                         [SecondaryStatKey.RareDropRateBonus]: Math.max(0, baseValues[SecondaryStatKey.RareDropRateBonus] + bonus[SecondaryStatKey.RareDropRateBonus]),
                         [SecondaryStatKey.EnchantSuccessRateBonus]: Math.max(0, baseValues[SecondaryStatKey.EnchantSuccessRateBonus] + bonus[SecondaryStatKey.EnchantSuccessRateBonus]),
                         [SecondaryStatKey.GoldGainRate]: Math.max(0, baseValues[SecondaryStatKey.GoldGainRate] + bonus[SecondaryStatKey.GoldGainRate]),
-                        [SecondaryStatKey.ExpGainRate]: Math.max(0, baseValues[SecondaryStatKey.ExpGainRate] + bonus[SecondaryStatKey.ExpGainRate])
+                        [SecondaryStatKey.ExpGainRate]: Math.max(0, baseValues[SecondaryStatKey.ExpGainRate] + bonus[SecondaryStatKey.ExpGainRate]),
+                        [SecondaryStatKey.EliteEncounterRate]: Math.max(0, baseValues[SecondaryStatKey.EliteEncounterRate] + bonus[SecondaryStatKey.EliteEncounterRate])
                     };
 
                     const totalBonusDefensePercent = totalValues[SecondaryStatKey.BonusDefensePercent];
@@ -1440,7 +1444,8 @@
                         [SecondaryStatKey.RareDropRateBonus]: totalValues[SecondaryStatKey.RareDropRateBonus],
                         [SecondaryStatKey.EnchantSuccessRateBonus]: totalValues[SecondaryStatKey.EnchantSuccessRateBonus],
                         [SecondaryStatKey.GoldGainRate]: totalValues[SecondaryStatKey.GoldGainRate],
-                        [SecondaryStatKey.ExpGainRate]: totalValues[SecondaryStatKey.ExpGainRate]
+                        [SecondaryStatKey.ExpGainRate]: totalValues[SecondaryStatKey.ExpGainRate],
+                        [SecondaryStatKey.EliteEncounterRate]: totalValues[SecondaryStatKey.EliteEncounterRate]
                     });
 
                     return {
@@ -1487,6 +1492,7 @@
                         [SecondaryStatKey.EnchantSuccessRateBonus]: asNonNegative(bonusStats[SecondaryStatKey.EnchantSuccessRateBonus]),
                         [SecondaryStatKey.GoldGainRate]: asNonNegative(bonusStats[SecondaryStatKey.GoldGainRate]),
                         [SecondaryStatKey.ExpGainRate]: asNonNegative(bonusStats[SecondaryStatKey.ExpGainRate]),
+                        [SecondaryStatKey.EliteEncounterRate]: asNonNegative(bonusStats[SecondaryStatKey.EliteEncounterRate]),
                         [PrimaryStatKey.STR]: asNonNegative(bonusStats[PrimaryStatKey.STR]),
                         [PrimaryStatKey.INT]: asNonNegative(bonusStats[PrimaryStatKey.INT]),
                         [PrimaryStatKey.VIT]: asNonNegative(bonusStats[PrimaryStatKey.VIT]),
@@ -1785,6 +1791,9 @@
 
             const LEVEL_UP_STAT_POINT_GAIN = 5;
             const MIN_PRIMARY_STAT_VALUE = 1;
+            const BASE_ELITE_ENCOUNTER_RATE = 5;
+            const DEATH_FLOOR_PENALTY = 20;
+            const DEATH_EXP_LOSS_RATE = 0.05;
 
             const playerProgressState = {
                 level: 1,
@@ -1793,7 +1802,8 @@
                 primaryStats: createPrimaryStats(DEFAULT_PRIMARY_STATS)
             };
 
-            const getRequiredExp = (level) => Math.max(1, Math.floor(100 * Math.pow(1.2, Math.max(0, level - 1))));
+            const getRequiredExp = (level) => Math.max(1, Math.floor(80 + Math.pow(Math.max(1, level), 1.45) * 18));
+            const getKillExp = (floorValue) => Math.max(1, Math.floor(14 + clampFloor(floorValue) * 0.55));
 
             const updateStatAdjustButtonState = () => {
                 const buttons = document.querySelectorAll('.stat-adjust-btn');
@@ -1836,6 +1846,19 @@
                 if (statPointsEl) {
                     statPointsEl.innerText = String(playerProgressState.statPoints);
                 }
+                const headerLevelEl = document.getElementById('header-lvl');
+                if (headerLevelEl) {
+                    headerLevelEl.innerText = String(playerProgressState.level);
+                }
+                const battleExpTextEl = document.getElementById('player-exp-text-battle');
+                if (battleExpTextEl) {
+                    battleExpTextEl.innerText = `${playerProgressState.exp}/${requiredExp}`;
+                }
+                const battleExpBarEl = document.getElementById('player-exp-bar-battle');
+                if (battleExpBarEl) {
+                    const ratio = requiredExp > 0 ? Math.min(100, Math.max(0, (playerProgressState.exp / requiredExp) * 100)) : 0;
+                    battleExpBarEl.style.width = `${ratio.toFixed(2)}%`;
+                }
                 updateStatAdjustButtonState();
             };
 
@@ -1875,7 +1898,7 @@
                 } else {
                     return;
                 }
-                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats });
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
                 renderStatusSummary();
             };
 
@@ -2223,74 +2246,240 @@
                 }
             };
 
-            const TEST_ENEMIES = Object.freeze([
-                {
-                    id: 'e_train_slime',
-                    name: 'Training Slime',
-                    iconClass: 'fa-droplet',
-                    iconColorClass: 'text-emerald-400',
-                    stats: {
-                        maxHp: 90,
-                        physicalAttack: 8,
-                        magicAttack: 0,
-                        defense: 15,
-                        hitRate: 20,
-                        avoidRate: 85,
-                        criticalChance: 0,
-                        bonusDamagePercent: 0,
-                        bonusDefensePercent: 0,
-                        luk: 0
-                    },
-                    ai: {
-                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
+            const MAX_IMPLEMENTED_FLOOR = 500;
+
+            const ENEMY_COMMON_BASE_RANGES = Object.freeze({
+                maxHp: [70, 90],
+                physicalAttack: [8, 10],
+                magicAttack: [0, 0],
+                defense: [11, 13],
+                hitRate: [22, 22],
+                avoidRate: [85, 85],
+                criticalChance: [0, 0],
+                bonusDamagePercent: [0, 0],
+                bonusDefensePercent: [0, 0],
+                luk: [0, 0]
+            });
+
+            const ENEMY_TIER_SCALING = Object.freeze({
+                maxHp: 1.18,
+                physicalAttack: 1.14,
+                magicAttack: 1.14,
+                defense: 1.16,
+                hitRate: 1,
+                avoidRate: 1,
+                criticalChance: 1,
+                bonusDamagePercent: 1,
+                bonusDefensePercent: 1,
+                luk: 1
+            });
+
+            const ENEMY_AFFIX_SCALING = Object.freeze({
+                normal: {
+                    key: 'normal',
+                    label: 'Normal',
+                    statMultipliers: {
+                        maxHp: 1,
+                        physicalAttack: 1,
+                        magicAttack: 1,
+                        defense: 1,
+                        hitRate: 1,
+                        avoidRate: 1,
+                        criticalChance: 1,
+                        bonusDamagePercent: 1,
+                        bonusDefensePercent: 1,
+                        luk: 1
                     }
                 },
-                {
-                    id: 'e_train_wisp',
-                    name: 'Training Wisp',
-                    iconClass: 'fa-wind',
-                    iconColorClass: 'text-cyan-400',
-                    stats: {
-                        maxHp: 75,
-                        physicalAttack: 7,
-                        magicAttack: 0,
-                        defense: 10,
-                        hitRate: 20,
-                        avoidRate: 110,
-                        criticalChance: 0,
-                        bonusDamagePercent: 0,
-                        bonusDefensePercent: 0,
-                        luk: 0
-                    },
-                    ai: {
-                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
+                elite: {
+                    key: 'elite',
+                    label: 'Elite',
+                    statMultipliers: {
+                        maxHp: 1.25,
+                        physicalAttack: 1.15,
+                        magicAttack: 1.15,
+                        defense: 1.2,
+                        hitRate: 1,
+                        avoidRate: 1,
+                        criticalChance: 1,
+                        bonusDamagePercent: 1,
+                        bonusDefensePercent: 1,
+                        luk: 1
                     }
+                }
+            });
+
+            const FLOOR_ENEMY_POOLS = Object.freeze([
+                Object.freeze([
+                    { id: 'f001_slime', name: '緑スライム', iconClass: 'fa-droplet', iconColorClass: 'text-emerald-400', statMultipliers: { maxHp: 0.9, defense: 0.9, physicalAttack: 0.95 } },
+                    { id: 'f001_goblin', name: 'ゴブリン斥候', iconClass: 'fa-dagger', iconColorClass: 'text-lime-500', statMultipliers: { maxHp: 1.0, defense: 1.0, physicalAttack: 1.0 } },
+                    { id: 'f001_wolf', name: '灰毛ウルフ', iconClass: 'fa-dog', iconColorClass: 'text-slate-500', statMultipliers: { maxHp: 0.95, defense: 0.9, physicalAttack: 1.1 } }
+                ]),
+                Object.freeze([
+                    { id: 'f101_skeleton', name: '骸骨兵', iconClass: 'fa-skull', iconColorClass: 'text-slate-400', statMultipliers: { maxHp: 1.05, defense: 1.05, physicalAttack: 1.05 } },
+                    { id: 'f101_bat', name: 'ブラッドバット', iconClass: 'fa-bat', iconColorClass: 'text-purple-500', statMultipliers: { maxHp: 0.9, defense: 0.9, physicalAttack: 1.15 } },
+                    { id: 'f101_orc', name: 'オーク戦士', iconClass: 'fa-hammer', iconColorClass: 'text-amber-700', statMultipliers: { maxHp: 1.15, defense: 1.1, physicalAttack: 1.0 } }
+                ]),
+                Object.freeze([
+                    { id: 'f201_gargoyle', name: 'ガーゴイル', iconClass: 'fa-chess-rook', iconColorClass: 'text-stone-500', statMultipliers: { maxHp: 1.1, defense: 1.2, physicalAttack: 0.95 } },
+                    { id: 'f201_lizard', name: 'リザードマン', iconClass: 'fa-dragon', iconColorClass: 'text-teal-500', statMultipliers: { maxHp: 1.0, defense: 1.0, physicalAttack: 1.1 } },
+                    { id: 'f201_bandit', name: '山賊剣士', iconClass: 'fa-user-ninja', iconColorClass: 'text-rose-500', statMultipliers: { maxHp: 0.95, defense: 0.95, physicalAttack: 1.2 } }
+                ]),
+                Object.freeze([
+                    { id: 'f301_dullahan', name: 'デュラハン', iconClass: 'fa-shield', iconColorClass: 'text-indigo-500', statMultipliers: { maxHp: 1.15, defense: 1.1, physicalAttack: 1.1 } },
+                    { id: 'f301_ogre', name: 'オーガ', iconClass: 'fa-dumbbell', iconColorClass: 'text-orange-600', statMultipliers: { maxHp: 1.2, defense: 1.0, physicalAttack: 1.15 } },
+                    { id: 'f301_wraith', name: 'レイス', iconClass: 'fa-ghost', iconColorClass: 'text-cyan-400', statMultipliers: { maxHp: 1.0, defense: 0.95, physicalAttack: 1.2 } }
+                ]),
+                Object.freeze([
+                    { id: 'f401_revenant', name: 'レヴナント', iconClass: 'fa-skull-crossbones', iconColorClass: 'text-red-500', statMultipliers: { maxHp: 1.15, defense: 1.15, physicalAttack: 1.1 } },
+                    { id: 'f401_manticore', name: 'マンティコア幼体', iconClass: 'fa-cat', iconColorClass: 'text-yellow-600', statMultipliers: { maxHp: 1.05, defense: 0.95, physicalAttack: 1.25 } },
+                    { id: 'f401_knight', name: '呪鋼騎士', iconClass: 'fa-shield-halved', iconColorClass: 'text-slate-600', statMultipliers: { maxHp: 1.2, defense: 1.25, physicalAttack: 1.0 } }
+                ])
+            ]);
+
+            const EQUIP_SLOT = Object.freeze({
+                weapon: 'weapon',
+                armor: 'armor',
+                head: 'head',
+                hands: 'hands',
+                feet: 'feet',
+                accessory: 'accessory'
+            });
+
+            const ITEM_RARITY = Object.freeze({
+                normal: 'normal',
+                magic: 'magic',
+                rare: 'rare',
+                legendary: 'legendary'
+            });
+
+            const RARITY_DROP_WEIGHTS = Object.freeze([
+                { rarity: ITEM_RARITY.normal, weight: 85 },
+                { rarity: ITEM_RARITY.magic, weight: 12 },
+                { rarity: ITEM_RARITY.rare, weight: 3 }
+            ]);
+
+            const RARITY_MULTIPLIER = Object.freeze({
+                [ITEM_RARITY.normal]: 1,
+                [ITEM_RARITY.magic]: 1.1,
+                [ITEM_RARITY.rare]: 1.3,
+                [ITEM_RARITY.legendary]: 1.6
+            });
+
+            const AFFIX_COUNT_WEIGHTS = Object.freeze([
+                { count: 0, weight: 40 },
+                { count: 1, weight: 35 },
+                { count: 2, weight: 20 },
+                { count: 3, weight: 5 }
+            ]);
+
+            const WEAPON_MAIN_TIER_MULTIPLIER = 1.14;
+            const BASE_DROP_CHANCE = 0.1;
+            const DROP_RATE_BONUS_CAP = 0.25;
+            const BOSS_LEGENDARY_DROP_CHANCE = 0.01;
+
+            const AFFIX_POOL = Object.freeze([
+                { id: 'affix_patk_flat', label: '攻撃力', statKey: SecondaryStatKey.PhysicalAttack, min: 1, max: 100 },
+                { id: 'affix_hp_flat', label: '最大HP', statKey: SecondaryStatKey.MaxHP, min: 1, max: 300 },
+                { id: 'affix_def_flat', label: '防御力', statKey: SecondaryStatKey.Defense, min: 1, max: 80 },
+                { id: 'affix_hit_flat', label: '命中', statKey: SecondaryStatKey.HitRate, min: 1, max: 60 },
+                { id: 'affix_crit_flat', label: '会心', statKey: SecondaryStatKey.CriticalChance, min: 1, max: 20 },
+                { id: 'affix_str_flat', label: 'STR', statKey: PrimaryStatKey.STR, min: 1, max: 30 },
+                { id: 'affix_vit_flat', label: 'VIT', statKey: PrimaryStatKey.VIT, min: 1, max: 30 },
+                { id: 'affix_int_flat', label: 'INT', statKey: PrimaryStatKey.INT, min: 1, max: 30 },
+                { id: 'affix_dex_flat', label: 'DEX', statKey: PrimaryStatKey.DEX, min: 1, max: 30 },
+                { id: 'affix_luk_flat', label: 'LUK', statKey: PrimaryStatKey.LUK, min: 1, max: 30 },
+                { id: 'affix_exp_flat', label: '経験値獲得補正', statKey: SecondaryStatKey.ExpGainRate, min: 1, max: 15 }
+            ]);
+
+            const EQUIPMENT_DROP_TABLES = Object.freeze([
+                {
+                    minFloor: 1,
+                    maxFloor: 100,
+                    bases: [
+                        { id: 'w_t1_sword', slot: EQUIP_SLOT.weapon, name: '訓練剣', iconClass: 'fa-sword', mainStatKey: SecondaryStatKey.PhysicalAttack, mainStatMin: 8, mainStatMax: 18, uniqueStatKey: PrimaryStatKey.STR, uniqueMin: 1, uniqueMax: 5 },
+                        { id: 'a_t1_armor', slot: EQUIP_SLOT.armor, name: '革鎧', iconClass: 'fa-shield-halved', mainStatKey: SecondaryStatKey.Defense, mainStatMin: 6, mainStatMax: 14, uniqueStatKey: SecondaryStatKey.MaxHP, uniqueMin: 8, uniqueMax: 40 },
+                        { id: 'h_t1_helm', slot: EQUIP_SLOT.head, name: '革帽子', iconClass: 'fa-helmet-safety', mainStatKey: SecondaryStatKey.MaxHP, mainStatMin: 20, mainStatMax: 60, uniqueStatKey: PrimaryStatKey.VIT, uniqueMin: 1, uniqueMax: 5 },
+                        { id: 'g_t1_glove', slot: EQUIP_SLOT.hands, name: '作業手袋', iconClass: 'fa-hand-back-fist', mainStatKey: SecondaryStatKey.HitRate, mainStatMin: 3, mainStatMax: 10, uniqueStatKey: PrimaryStatKey.DEX, uniqueMin: 1, uniqueMax: 5 },
+                        { id: 'f_t1_boot', slot: EQUIP_SLOT.feet, name: '革靴', iconClass: 'fa-shoe-prints', mainStatKey: SecondaryStatKey.AvoidRate, mainStatMin: 2, mainStatMax: 8, uniqueStatKey: SecondaryStatKey.Defense, uniqueMin: 1, uniqueMax: 8 },
+                        { id: 'x_t1_ring', slot: EQUIP_SLOT.accessory, name: '学徒の指輪', iconClass: 'fa-ring', mainStatKey: SecondaryStatKey.ExpGainRate, mainStatMin: 1, mainStatMax: 8, uniqueStatKey: PrimaryStatKey.LUK, uniqueMin: 1, uniqueMax: 5 }
+                    ]
                 },
                 {
-                    id: 'e_train_golem',
-                    name: 'Training Golem',
-                    iconClass: 'fa-cubes-stacked',
-                    iconColorClass: 'text-slate-500',
-                    stats: {
-                        maxHp: 160,
-                        physicalAttack: 10,
-                        magicAttack: 0,
-                        defense: 80,
-                        hitRate: 20,
-                        avoidRate: 70,
-                        criticalChance: 0,
-                        bonusDamagePercent: 0,
-                        bonusDefensePercent: 0,
-                        luk: 0
-                    },
-                    ai: {
-                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
-                    }
+                    minFloor: 101,
+                    maxFloor: 200,
+                    bases: [
+                        { id: 'w_t2_sword', slot: EQUIP_SLOT.weapon, name: '鋼鉄剣', iconClass: 'fa-sword', mainStatKey: SecondaryStatKey.PhysicalAttack, mainStatMin: 12, mainStatMax: 24, uniqueStatKey: PrimaryStatKey.STR, uniqueMin: 3, uniqueMax: 8 },
+                        { id: 'a_t2_armor', slot: EQUIP_SLOT.armor, name: '鋼鎧', iconClass: 'fa-shield-halved', mainStatKey: SecondaryStatKey.Defense, mainStatMin: 9, mainStatMax: 18, uniqueStatKey: SecondaryStatKey.MaxHP, uniqueMin: 20, uniqueMax: 75 },
+                        { id: 'h_t2_helm', slot: EQUIP_SLOT.head, name: '鋼兜', iconClass: 'fa-helmet-safety', mainStatKey: SecondaryStatKey.MaxHP, mainStatMin: 35, mainStatMax: 90, uniqueStatKey: PrimaryStatKey.VIT, uniqueMin: 3, uniqueMax: 8 },
+                        { id: 'g_t2_glove', slot: EQUIP_SLOT.hands, name: '狙撃手袋', iconClass: 'fa-hand-back-fist', mainStatKey: SecondaryStatKey.HitRate, mainStatMin: 6, mainStatMax: 14, uniqueStatKey: PrimaryStatKey.DEX, uniqueMin: 3, uniqueMax: 8 },
+                        { id: 'f_t2_boot', slot: EQUIP_SLOT.feet, name: '戦闘靴', iconClass: 'fa-shoe-prints', mainStatKey: SecondaryStatKey.AvoidRate, mainStatMin: 4, mainStatMax: 12, uniqueStatKey: SecondaryStatKey.Defense, uniqueMin: 4, uniqueMax: 12 },
+                        { id: 'x_t2_ring', slot: EQUIP_SLOT.accessory, name: '熟練の指輪', iconClass: 'fa-ring', mainStatKey: SecondaryStatKey.ExpGainRate, mainStatMin: 3, mainStatMax: 11, uniqueStatKey: PrimaryStatKey.LUK, uniqueMin: 3, uniqueMax: 8 }
+                    ]
+                },
+                {
+                    minFloor: 201,
+                    maxFloor: 300,
+                    bases: [
+                        { id: 'w_t3_sword', slot: EQUIP_SLOT.weapon, name: '騎士団剣', iconClass: 'fa-sword', mainStatKey: SecondaryStatKey.PhysicalAttack, mainStatMin: 16, mainStatMax: 30, uniqueStatKey: PrimaryStatKey.STR, uniqueMin: 6, uniqueMax: 12 },
+                        { id: 'a_t3_armor', slot: EQUIP_SLOT.armor, name: '騎士団鎧', iconClass: 'fa-shield-halved', mainStatKey: SecondaryStatKey.Defense, mainStatMin: 13, mainStatMax: 24, uniqueStatKey: SecondaryStatKey.MaxHP, uniqueMin: 40, uniqueMax: 110 },
+                        { id: 'h_t3_helm', slot: EQUIP_SLOT.head, name: '騎士団兜', iconClass: 'fa-helmet-safety', mainStatKey: SecondaryStatKey.MaxHP, mainStatMin: 55, mainStatMax: 130, uniqueStatKey: PrimaryStatKey.VIT, uniqueMin: 6, uniqueMax: 12 },
+                        { id: 'g_t3_glove', slot: EQUIP_SLOT.hands, name: '必中手袋', iconClass: 'fa-hand-back-fist', mainStatKey: SecondaryStatKey.HitRate, mainStatMin: 10, mainStatMax: 19, uniqueStatKey: PrimaryStatKey.DEX, uniqueMin: 6, uniqueMax: 12 },
+                        { id: 'f_t3_boot', slot: EQUIP_SLOT.feet, name: '疾風の靴', iconClass: 'fa-shoe-prints', mainStatKey: SecondaryStatKey.AvoidRate, mainStatMin: 7, mainStatMax: 16, uniqueStatKey: SecondaryStatKey.Defense, uniqueMin: 8, uniqueMax: 17 },
+                        { id: 'x_t3_ring', slot: EQUIP_SLOT.accessory, name: '探求者の指輪', iconClass: 'fa-ring', mainStatKey: SecondaryStatKey.ExpGainRate, mainStatMin: 5, mainStatMax: 14, uniqueStatKey: PrimaryStatKey.LUK, uniqueMin: 6, uniqueMax: 12 }
+                    ]
+                },
+                {
+                    minFloor: 301,
+                    maxFloor: 400,
+                    bases: [
+                        { id: 'w_t4_sword', slot: EQUIP_SLOT.weapon, name: '聖鋼剣', iconClass: 'fa-sword', mainStatKey: SecondaryStatKey.PhysicalAttack, mainStatMin: 20, mainStatMax: 36, uniqueStatKey: PrimaryStatKey.STR, uniqueMin: 10, uniqueMax: 16 },
+                        { id: 'a_t4_armor', slot: EQUIP_SLOT.armor, name: '聖鋼鎧', iconClass: 'fa-shield-halved', mainStatKey: SecondaryStatKey.Defense, mainStatMin: 17, mainStatMax: 30, uniqueStatKey: SecondaryStatKey.MaxHP, uniqueMin: 60, uniqueMax: 145 },
+                        { id: 'h_t4_helm', slot: EQUIP_SLOT.head, name: '聖鋼兜', iconClass: 'fa-helmet-safety', mainStatKey: SecondaryStatKey.MaxHP, mainStatMin: 75, mainStatMax: 165, uniqueStatKey: PrimaryStatKey.VIT, uniqueMin: 10, uniqueMax: 16 },
+                        { id: 'g_t4_glove', slot: EQUIP_SLOT.hands, name: '精密手袋', iconClass: 'fa-hand-back-fist', mainStatKey: SecondaryStatKey.HitRate, mainStatMin: 13, mainStatMax: 24, uniqueStatKey: PrimaryStatKey.DEX, uniqueMin: 10, uniqueMax: 16 },
+                        { id: 'f_t4_boot', slot: EQUIP_SLOT.feet, name: '幻影靴', iconClass: 'fa-shoe-prints', mainStatKey: SecondaryStatKey.AvoidRate, mainStatMin: 10, mainStatMax: 20, uniqueStatKey: SecondaryStatKey.Defense, uniqueMin: 12, uniqueMax: 22 },
+                        { id: 'x_t4_ring', slot: EQUIP_SLOT.accessory, name: '賢者の指輪', iconClass: 'fa-ring', mainStatKey: SecondaryStatKey.ExpGainRate, mainStatMin: 7, mainStatMax: 17, uniqueStatKey: PrimaryStatKey.LUK, uniqueMin: 10, uniqueMax: 16 }
+                    ]
+                },
+                {
+                    minFloor: 401,
+                    maxFloor: 500,
+                    bases: [
+                        { id: 'w_t5_sword', slot: EQUIP_SLOT.weapon, name: '王命剣', iconClass: 'fa-sword', mainStatKey: SecondaryStatKey.PhysicalAttack, mainStatMin: 24, mainStatMax: 42, uniqueStatKey: PrimaryStatKey.STR, uniqueMin: 14, uniqueMax: 20 },
+                        { id: 'a_t5_armor', slot: EQUIP_SLOT.armor, name: '王命鎧', iconClass: 'fa-shield-halved', mainStatKey: SecondaryStatKey.Defense, mainStatMin: 21, mainStatMax: 36, uniqueStatKey: SecondaryStatKey.MaxHP, uniqueMin: 90, uniqueMax: 190 },
+                        { id: 'h_t5_helm', slot: EQUIP_SLOT.head, name: '王命兜', iconClass: 'fa-helmet-safety', mainStatKey: SecondaryStatKey.MaxHP, mainStatMin: 95, mainStatMax: 210, uniqueStatKey: PrimaryStatKey.VIT, uniqueMin: 14, uniqueMax: 20 },
+                        { id: 'g_t5_glove', slot: EQUIP_SLOT.hands, name: '神眼手袋', iconClass: 'fa-hand-back-fist', mainStatKey: SecondaryStatKey.HitRate, mainStatMin: 16, mainStatMax: 28, uniqueStatKey: PrimaryStatKey.DEX, uniqueMin: 14, uniqueMax: 20 },
+                        { id: 'f_t5_boot', slot: EQUIP_SLOT.feet, name: '迅雷靴', iconClass: 'fa-shoe-prints', mainStatKey: SecondaryStatKey.AvoidRate, mainStatMin: 12, mainStatMax: 24, uniqueStatKey: SecondaryStatKey.Defense, uniqueMin: 15, uniqueMax: 28 },
+                        { id: 'x_t5_ring', slot: EQUIP_SLOT.accessory, name: '覇者の指輪', iconClass: 'fa-ring', mainStatKey: SecondaryStatKey.ExpGainRate, mainStatMin: 9, mainStatMax: 20, uniqueStatKey: PrimaryStatKey.LUK, uniqueMin: 14, uniqueMax: 20 }
+                    ]
                 }
             ]);
 
+            const SELL_PRICE_BY_RARITY = Object.freeze({
+                [ITEM_RARITY.normal]: 25,
+                [ITEM_RARITY.magic]: 90,
+                [ITEM_RARITY.rare]: 260,
+                [ITEM_RARITY.legendary]: 1000
+            });
+
+            const equipmentState = {
+                inventoryItems: [],
+                equipped: {
+                    weapon: null,
+                    armor: null,
+                    head: null,
+                    hands: null,
+                    feet: null,
+                    accessory1: null,
+                    accessory2: null
+                },
+                filter: 'all',
+                sortOrder: 'newest'
+            };
+
             const battleState = {
-                enemyIndex: 0,
+                currentFloor: 1,
+                currentEnemy: null,
                 enemyHp: 0,
                 playerHp: 0,
                 playerCp: 0,
@@ -2298,6 +2487,70 @@
             };
 
             const normalizeDamageType = (damageKind) => (damageKind === 'Magic' ? 'Magical' : 'Physical');
+
+            const clampFloor = (floorValue) => Math.max(1, Math.min(MAX_IMPLEMENTED_FLOOR, Math.floor(Number.isFinite(floorValue) ? floorValue : 1)));
+            const toTierFromFloor = (floorValue) => Math.floor((clampFloor(floorValue) - 1) / 100);
+            const randomIntInclusive = (min, max, rng = Math.random) => {
+                const minValue = Math.floor(Math.min(min, max));
+                const maxValue = Math.floor(Math.max(min, max));
+                if (minValue === maxValue) {
+                    return minValue;
+                }
+                const roll = Math.min(0.999999999, Math.max(0, Number(rng())));
+                return minValue + Math.floor(roll * (maxValue - minValue + 1));
+            };
+
+            const generateEnemyStatsForFloor = ({ floor, archetype, affixKey = 'normal', rng = Math.random }) => {
+                const tier = toTierFromFloor(floor);
+                const affix = ENEMY_AFFIX_SCALING[affixKey] || ENEMY_AFFIX_SCALING.normal;
+                const multipliers = archetype.statMultipliers || {};
+                const pickFinalValue = (key) => {
+                    const [rangeMin, rangeMax] = ENEMY_COMMON_BASE_RANGES[key];
+                    const rolled = randomIntInclusive(rangeMin, rangeMax, rng);
+                    const tierScale = Math.pow(ENEMY_TIER_SCALING[key] || 1, tier);
+                    const archetypeScale = Number.isFinite(multipliers[key]) ? multipliers[key] : 1;
+                    const affixScale = Number.isFinite(affix.statMultipliers[key]) ? affix.statMultipliers[key] : 1;
+                    return Math.max(0, Math.floor(rolled * tierScale * archetypeScale * affixScale));
+                };
+
+                return {
+                    maxHp: Math.max(1, pickFinalValue('maxHp')),
+                    physicalAttack: pickFinalValue('physicalAttack'),
+                    magicAttack: pickFinalValue('magicAttack'),
+                    defense: pickFinalValue('defense'),
+                    hitRate: pickFinalValue('hitRate'),
+                    avoidRate: pickFinalValue('avoidRate'),
+                    criticalChance: pickFinalValue('criticalChance'),
+                    bonusDamagePercent: pickFinalValue('bonusDamagePercent'),
+                    bonusDefensePercent: pickFinalValue('bonusDefensePercent'),
+                    luk: pickFinalValue('luk')
+                };
+            };
+
+            const buildEnemyForFloor = ({ floor, rng = Math.random, forcedEnemyIndex = null, affixKey = 'normal' }) => {
+                const normalizedFloor = clampFloor(floor);
+                const poolIndex = Math.min(FLOOR_ENEMY_POOLS.length - 1, Math.floor((normalizedFloor - 1) / 100));
+                const pool = FLOOR_ENEMY_POOLS[poolIndex];
+                const enemyIndex = Number.isFinite(forcedEnemyIndex)
+                    ? Math.max(0, Math.min(pool.length - 1, Math.floor(forcedEnemyIndex)))
+                    : randomIntInclusive(0, pool.length - 1, rng);
+                const archetype = pool[enemyIndex];
+                return {
+                    id: archetype.id,
+                    name: archetype.name,
+                    iconClass: archetype.iconClass,
+                    iconColorClass: archetype.iconColorClass,
+                    enemyPoolIndex: enemyIndex,
+                    enemyPoolSize: pool.length,
+                    floor: normalizedFloor,
+                    tier: toTierFromFloor(normalizedFloor),
+                    affixKey,
+                    stats: generateEnemyStatsForFloor({ floor: normalizedFloor, archetype, affixKey, rng }),
+                    ai: {
+                        defaultAttack: { damageKind: 'Physical', skillPower: 1.0 }
+                    }
+                };
+            };
 
             const toEnemyCombatant = (enemy) => ({
                 primaryStats: createPrimaryStats({ [PrimaryStatKey.LUK]: enemy.stats.luk }),
@@ -2314,16 +2567,379 @@
                 })
             });
 
+            const getEquippedBonusStats = () => {
+                const merged = {};
+                const addValue = (key, value) => {
+                    if (!Number.isFinite(value) || value === 0) {
+                        return;
+                    }
+                    merged[key] = (merged[key] || 0) + value;
+                };
+                const equippedItems = Object.values(equipmentState.equipped).filter(Boolean);
+                equippedItems.forEach((item) => {
+                    (item.finalStats || []).forEach(({ key, value }) => addValue(key, value));
+                });
+                return merged;
+            };
+
             const getPlayerCombatant = () => {
                 const primaryStats = createPrimaryStats(playerProgressState.primaryStats);
                 const derived = PlayerStatusCalculator.calculateSecondaryStats({
                     primaryStats,
-                    bonusStats: {}
+                    bonusStats: getEquippedBonusStats()
                 });
                 return {
                     primaryStats,
                     secondaryStats: derived.secondaryStats
                 };
+            };
+
+            const pushDropLog = (message, rarity = ITEM_RARITY.normal) => {
+                const dropLogList = document.getElementById('drop-log-list');
+                if (!dropLogList) {
+                    return;
+                }
+                const row = document.createElement('div');
+                row.className = `drop-log-item rarity-${rarity}`;
+                row.innerHTML = `<i class="fas fa-box-open"></i><span>${message}</span>`;
+                dropLogList.prepend(row);
+                while (dropLogList.children.length > 8) {
+                    dropLogList.removeChild(dropLogList.lastChild);
+                }
+            };
+
+            const pickWeighted = (entries, rng = Math.random) => {
+                const totalWeight = entries.reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
+                if (totalWeight <= 0) {
+                    return entries[0] || null;
+                }
+                let cursor = rng() * totalWeight;
+                for (const entry of entries) {
+                    cursor -= Math.max(0, Number(entry.weight) || 0);
+                    if (cursor <= 0) {
+                        return entry;
+                    }
+                }
+                return entries[entries.length - 1] || null;
+            };
+
+            const resolveEquipmentTableByFloor = (floor) => EQUIPMENT_DROP_TABLES.find((table) => floor >= table.minFloor && floor <= table.maxFloor) || EQUIPMENT_DROP_TABLES[EQUIPMENT_DROP_TABLES.length - 1];
+
+            const rollItemRarity = (rng = Math.random) => {
+                const picked = pickWeighted(RARITY_DROP_WEIGHTS, rng);
+                return picked ? picked.rarity : ITEM_RARITY.normal;
+            };
+
+            const rollAffixCount = (rng = Math.random) => {
+                const picked = pickWeighted(AFFIX_COUNT_WEIGHTS, rng);
+                return picked ? picked.count : 0;
+            };
+
+            const rollInRange = (min, max, rng = Math.random) => {
+                const safeMin = Math.floor(Math.min(min, max));
+                const safeMax = Math.floor(Math.max(min, max));
+                return safeMin + Math.floor(rng() * (safeMax - safeMin + 1));
+            };
+
+            const generateItemFromBase = ({ floor, baseDefinition, rarity, rng = Math.random }) => {
+                const tier = toTierFromFloor(floor);
+                const rarityMultiplier = RARITY_MULTIPLIER[rarity] || 1;
+                const tierScale = baseDefinition.slot === EQUIP_SLOT.weapon ? Math.pow(WEAPON_MAIN_TIER_MULTIPLIER, tier) : 1;
+
+                const mainRoll = rollInRange(baseDefinition.mainStatMin, baseDefinition.mainStatMax, rng);
+                const mainValue = Math.floor(mainRoll * rarityMultiplier * tierScale);
+
+                const uniqueRoll = rollInRange(baseDefinition.uniqueMin, baseDefinition.uniqueMax, rng);
+                const uniqueValue = Math.floor(uniqueRoll * rarityMultiplier);
+
+                const finalStats = [
+                    { key: baseDefinition.mainStatKey, value: Math.max(0, mainValue) },
+                    { key: baseDefinition.uniqueStatKey, value: Math.max(0, uniqueValue) }
+                ];
+
+                const affixCount = rollAffixCount(rng);
+                const affixes = [];
+                for (let i = 0; i < affixCount; i += 1) {
+                    const affix = AFFIX_POOL[Math.floor(rng() * AFFIX_POOL.length)];
+                    if (!affix) {
+                        continue;
+                    }
+                    const value = Math.floor(rollInRange(affix.min, affix.max, rng));
+                    affixes.push({ id: affix.id, label: affix.label, key: affix.statKey, value });
+                    finalStats.push({ key: affix.statKey, value });
+                }
+
+                const sellPrice = Math.floor((SELL_PRICE_BY_RARITY[rarity] || 20) + affixes.reduce((sum, affix) => sum + Math.max(1, Math.floor(affix.value / 8)), 0));
+
+                return {
+                    instanceId: `itm_${Date.now()}_${Math.floor(rng() * 1e9)}`,
+                    baseId: baseDefinition.id,
+                    name: baseDefinition.name,
+                    iconClass: baseDefinition.iconClass,
+                    slot: baseDefinition.slot,
+                    rarity,
+                    floor,
+                    tier,
+                    affixes,
+                    finalStats,
+                    sellPrice,
+                    mainSummary: `${baseDefinition.mainStatKey}+${Math.max(0, mainValue)}`
+                };
+            };
+
+            const attemptEquipmentDrop = ({ floor, playerCombatant, isBoss = false, rng = Math.random }) => {
+                if (isBoss && rng() < BOSS_LEGENDARY_DROP_CHANCE) {
+                    return null;
+                }
+                const dropRateBonus = Math.min(DROP_RATE_BONUS_CAP, Math.max(0, (playerCombatant.secondaryStats.DropRateBonus || 0) / 100));
+                const normalDropChance = Math.min(1, BASE_DROP_CHANCE + dropRateBonus);
+                if (rng() >= normalDropChance) {
+                    return null;
+                }
+                const table = resolveEquipmentTableByFloor(floor);
+                const baseDefinition = table.bases[Math.floor(rng() * table.bases.length)];
+                const rarity = rollItemRarity(rng);
+                if (!baseDefinition) {
+                    return null;
+                }
+                return generateItemFromBase({ floor, baseDefinition, rarity, rng });
+            };
+
+            const getSlotLabel = (slot) => {
+                if (slot === EQUIP_SLOT.weapon) return '武器';
+                if (slot === EQUIP_SLOT.armor) return '鎧';
+                if (slot === EQUIP_SLOT.head) return '兜';
+                if (slot === EQUIP_SLOT.hands) return '手';
+                if (slot === EQUIP_SLOT.feet) return '足';
+                if (slot === EQUIP_SLOT.accessory) return '装飾品';
+                return '装備';
+            };
+
+            const equipmentUiState = {
+                pendingEquipItemId: null,
+                pendingEquipSlotKey: null
+            };
+
+            const summarizeItemStats = (item) => {
+                if (!item) {
+                    return 'なし';
+                }
+                const summary = (item.finalStats || []).slice(0, 3).map((stat) => `${stat.key}+${stat.value}`).join(' / ');
+                return summary || '補正なし';
+            };
+
+            const closeEquipSlotModal = () => {
+                const modal = document.getElementById('equip-slot-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                equipmentUiState.pendingEquipItemId = null;
+                equipmentUiState.pendingEquipSlotKey = null;
+            };
+
+            const closeCompareModal = () => {
+                const modal = document.getElementById('compare-modal');
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                equipmentUiState.pendingEquipSlotKey = null;
+            };
+
+            const openCompareModal = ({ candidateItem, slotKey }) => {
+                const modal = document.getElementById('compare-modal');
+                if (!modal || !candidateItem) {
+                    return;
+                }
+                const resolvedSlotKey = slotKey || candidateItem.slot;
+                const equippedItem = equipmentState.equipped[resolvedSlotKey] || null;
+                const equippedName = document.getElementById('compare-modal-equipped');
+                const candidateName = document.getElementById('compare-modal-candidate');
+                if (equippedName) equippedName.innerText = equippedItem ? equippedItem.name : 'なし';
+                if (candidateName) candidateName.innerText = candidateItem.name;
+
+                const equippedMap = {};
+                (equippedItem?.finalStats || []).forEach((stat) => {
+                    equippedMap[stat.key] = (equippedMap[stat.key] || 0) + stat.value;
+                });
+                const candidateMap = {};
+                (candidateItem.finalStats || []).forEach((stat) => {
+                    candidateMap[stat.key] = (candidateMap[stat.key] || 0) + stat.value;
+                });
+
+                const increase = [];
+                const decrease = [];
+                const keys = new Set([...Object.keys(equippedMap), ...Object.keys(candidateMap)]);
+                keys.forEach((key) => {
+                    const diff = Math.floor((candidateMap[key] || 0) - (equippedMap[key] || 0));
+                    if (diff > 0) increase.push(`${key} +${diff}`);
+                    if (diff < 0) decrease.push(`${key} ${diff}`);
+                });
+
+                const incEl = document.getElementById('compare-modal-increase');
+                const decEl = document.getElementById('compare-modal-decrease');
+                if (incEl) incEl.innerHTML = increase.length ? increase.map((line) => `<div class="text-[10px] text-emerald-600 font-bold">${line}</div>`).join('') : '<div class="text-[10px] text-slate-400">なし</div>';
+                if (decEl) decEl.innerHTML = decrease.length ? decrease.map((line) => `<div class="text-[10px] text-rose-600 font-bold">${line}</div>`).join('') : '<div class="text-[10px] text-slate-400">なし</div>';
+
+                equipmentUiState.pendingEquipItemId = candidateItem.instanceId;
+                equipmentUiState.pendingEquipSlotKey = resolvedSlotKey;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const openEquipSlotModalForItem = (instanceId) => {
+                const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === instanceId);
+                const modal = document.getElementById('equip-slot-modal');
+                if (!item || !modal) {
+                    return;
+                }
+                equipmentUiState.pendingEquipItemId = instanceId;
+                equipmentUiState.pendingEquipSlotKey = null;
+                const title = document.getElementById('equip-slot-title');
+                if (title) title.innerText = `${item.name} を装備`;
+
+                const slot1Label = document.getElementById('equip-slot-1-label');
+                const slot2Label = document.getElementById('equip-slot-2-label');
+                const slot1Button = document.getElementById('equip-slot-1');
+                const slot2Button = document.getElementById('equip-slot-2');
+                const slot1Compare = document.getElementById('equip-slot-1-compare');
+                const slot2Compare = document.getElementById('equip-slot-2-compare');
+                const slot2Card = slot2Label ? slot2Label.closest('.rounded-2xl') : null;
+
+                if (item.slot === EQUIP_SLOT.accessory) {
+                    if (slot2Card) slot2Card.classList.remove('hidden');
+                    if (slot1Label) slot1Label.innerText = `装飾品1: ${equipmentState.equipped.accessory1 ? equipmentState.equipped.accessory1.name : 'なし'}`;
+                    if (slot2Label) slot2Label.innerText = `装飾品2: ${equipmentState.equipped.accessory2 ? equipmentState.equipped.accessory2.name : 'なし'}`;
+                    if (slot1Button) slot1Button.dataset.slotKey = 'accessory1';
+                    if (slot2Button) slot2Button.dataset.slotKey = 'accessory2';
+                    if (slot1Compare) slot1Compare.dataset.slotKey = 'accessory1';
+                    if (slot2Compare) slot2Compare.dataset.slotKey = 'accessory2';
+                } else {
+                    if (slot2Card) slot2Card.classList.add('hidden');
+                    const equipped = equipmentState.equipped[item.slot];
+                    if (slot1Label) slot1Label.innerText = `${getSlotLabel(item.slot)}: ${equipped ? equipped.name : 'なし'}`;
+                    if (slot1Button) slot1Button.dataset.slotKey = item.slot;
+                    if (slot1Compare) slot1Compare.dataset.slotKey = item.slot;
+                    if (slot2Button) slot2Button.dataset.slotKey = '';
+                    if (slot2Compare) slot2Compare.dataset.slotKey = '';
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            const equipItemById = (instanceId, slotOverride = null) => {
+                const targetItem = equipmentState.inventoryItems.find((item) => item.instanceId === instanceId);
+                if (!targetItem) {
+                    return;
+                }
+                if (targetItem.slot === EQUIP_SLOT.accessory) {
+                    if (slotOverride === 'accessory1' || slotOverride === 'accessory2') {
+                        equipmentState.equipped[slotOverride] = targetItem;
+                    } else if (!equipmentState.equipped.accessory1) {
+                        equipmentState.equipped.accessory1 = targetItem;
+                    } else if (!equipmentState.equipped.accessory2) {
+                        equipmentState.equipped.accessory2 = targetItem;
+                    } else {
+                        equipmentState.equipped.accessory1 = targetItem;
+                    }
+                } else {
+                    equipmentState.equipped[targetItem.slot] = targetItem;
+                }
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
+                renderStatusSummary();
+                renderBattleBars();
+                renderEquipmentSummary();
+                renderInventory();
+                persistBattleState();
+            };
+
+            const renderEquipmentSummary = () => {
+                const map = [
+                    ['equip-weapon', 'weapon-val', equipmentState.equipped.weapon],
+                    ['equip-armor', 'armor-val', equipmentState.equipped.armor],
+                    ['equip-head', 'head-val', equipmentState.equipped.head],
+                    ['equip-hands', 'hands-val', equipmentState.equipped.hands],
+                    ['equip-feet', 'feet-val', equipmentState.equipped.feet],
+                    ['equip-accessory1', 'accessory1-val', equipmentState.equipped.accessory1],
+                    ['equip-accessory2', 'accessory2-val', equipmentState.equipped.accessory2]
+                ];
+                map.forEach(([nameId, valueId, item]) => {
+                    const nameEl = document.getElementById(nameId);
+                    const valueEl = document.getElementById(valueId);
+                    if (nameEl) {
+                        nameEl.textContent = item ? item.name : 'なし';
+                    }
+                    if (valueEl) {
+                        valueEl.innerText = item ? summarizeItemStats(item) : '';
+                    }
+                });
+            };
+
+            const renderInventory = () => {
+                const list = document.getElementById('inventory-list');
+                const countEl = document.getElementById('inv-count');
+                if (countEl) {
+                    countEl.innerText = String(equipmentState.inventoryItems.length);
+                }
+                if (!list) {
+                    return;
+                }
+                const filter = equipmentState.filter;
+                const filtered = equipmentState.inventoryItems.filter((item) => filter === 'all' || item.slot === filter);
+                const ordered = equipmentState.sortOrder === 'newest' ? [...filtered].reverse() : [...filtered];
+                list.innerHTML = '';
+                if (!ordered.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'bg-white rounded-xl border p-3 text-xs text-slate-400 font-bold';
+                    empty.textContent = '装備はまだありません。';
+                    list.appendChild(empty);
+                    return;
+                }
+                ordered.forEach((item) => {
+                    const row = document.createElement('div');
+                    row.className = 'bg-white rounded-xl border p-3 shadow-sm';
+                    const affixText = item.affixes.length ? item.affixes.map((affix) => `${affix.label}+${affix.value}`).join(' / ') : 'Affixなし';
+                    const uniqueStat = item.finalStats[1] ? `${item.finalStats[1].key}+${item.finalStats[1].value}` : 'なし';
+                    row.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-black rarity-${item.rarity}"><i class="fas ${item.iconClass}"></i> ${item.name}</div>
+                                <div class="text-[10px] text-slate-500 font-bold mt-1">${getSlotLabel(item.slot)} / ${item.mainSummary}</div>
+                                <div class="text-[9px] text-slate-400 mt-1">固有: ${uniqueStat}</div>
+                                <div class="text-[9px] text-slate-400 mt-1">${affixText}</div>
+                            </div>
+                            <button class="equip-btn px-2 py-1 rounded-lg bg-slate-800 text-white text-[10px] font-black" data-item-id="${item.instanceId}">装備</button>
+                        </div>`;
+                    list.appendChild(row);
+                });
+                list.querySelectorAll('.equip-btn').forEach((button) => {
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        openEquipSlotModalForItem(button.dataset.itemId);
+                    });
+                });
+            };
+
+            const setInventoryFilter = (filter) => {
+                equipmentState.filter = filter;
+                document.querySelectorAll('.inv-filter-btn').forEach((btn) => {
+                    btn.classList.toggle('bg-slate-800', btn.dataset.invFilter === filter);
+                    btn.classList.toggle('text-white', btn.dataset.invFilter === filter);
+                });
+                renderInventory();
+            };
+
+            const toggleInventorySort = () => {
+                equipmentState.sortOrder = equipmentState.sortOrder === 'newest' ? 'oldest' : 'newest';
+                const sortLabel = document.getElementById('inv-sort-label');
+                if (sortLabel) {
+                    sortLabel.innerText = equipmentState.sortOrder === 'newest' ? '入手順' : '古い順';
+                }
+                renderInventory();
             };
 
             const pushMiniLog = (message) => {
@@ -2340,8 +2956,8 @@
             const renderBattleBars = () => {
                 const player = getPlayerCombatant();
                 const playerMaxHp = Math.max(1, Math.floor(player.secondaryStats.MaxHP));
-                const currentEnemy = TEST_ENEMIES[battleState.enemyIndex];
-                const enemyMaxHp = Math.max(1, currentEnemy.stats.maxHp);
+                const currentEnemy = battleState.currentEnemy;
+                const enemyMaxHp = Math.max(1, Math.floor((currentEnemy && currentEnemy.stats && currentEnemy.stats.maxHp) || 1));
 
                 const playerHpText = document.getElementById('player-hp-text');
                 if (playerHpText) {
@@ -2381,7 +2997,14 @@
                 }
                 const enemyCycleLabel = document.getElementById('enemy-cycle-label');
                 if (enemyCycleLabel) {
-                    enemyCycleLabel.innerText = `テスト敵 ${battleState.enemyIndex + 1} / ${TEST_ENEMIES.length}`;
+                    enemyCycleLabel.innerText = currentEnemy
+                        ? `Floor ${battleState.currentFloor} 出現候補 ${currentEnemy.enemyPoolIndex + 1} / ${currentEnemy.enemyPoolSize}`
+                        : `Floor ${battleState.currentFloor} 出現候補 - / 3`;
+                }
+
+                const headerFloor = document.getElementById('header-floor');
+                if (headerFloor) {
+                    headerFloor.innerText = String(battleState.currentFloor);
                 }
 
                 const enemyVisual = document.getElementById('enemy-visual');
@@ -2400,24 +3023,65 @@
             });
 
             const advanceEnemy = () => {
-                battleState.enemyIndex = (battleState.enemyIndex + 1) % TEST_ENEMIES.length;
-                battleState.enemyHp = TEST_ENEMIES[battleState.enemyIndex].stats.maxHp;
-                pushMiniLog(`次の敵: ${TEST_ENEMIES[battleState.enemyIndex].name}`);
+                if (battleState.currentFloor < MAX_IMPLEMENTED_FLOOR) {
+                    battleState.currentFloor += 1;
+                }
+                battleState.currentEnemy = buildEnemyForFloor({ floor: battleState.currentFloor, affixKey: 'normal' });
+                battleState.enemyHp = battleState.currentEnemy.stats.maxHp;
+                pushMiniLog(`次の敵: ${battleState.currentEnemy.name} (Floor ${battleState.currentFloor})`);
+                persistBattleState();
                 renderBattleBars();
+            };
+
+            const showDeathOverlay = ({ lostExp }) => {
+                const overlay = document.getElementById('death-overlay');
+                const lostExpEl = document.getElementById('lost-exp-val');
+                if (lostExpEl) {
+                    lostExpEl.innerText = String(lostExp);
+                }
+                if (overlay) {
+                    overlay.classList.remove('hidden');
+                    overlay.classList.add('flex');
+                }
+            };
+
+            const closeDeathOverlay = () => {
+                const overlay = document.getElementById('death-overlay');
+                if (!overlay) {
+                    return;
+                }
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            };
+
+            const applyDefeatPenalty = () => {
+                const lostExp = Math.floor(playerProgressState.exp * DEATH_EXP_LOSS_RATE);
+                playerProgressState.exp = Math.max(0, playerProgressState.exp - lostExp);
+                battleState.currentFloor = clampFloor(battleState.currentFloor - DEATH_FLOOR_PENALTY);
+                battleState.playerCp = 0;
+                battleState.currentEnemy = buildEnemyForFloor({ floor: battleState.currentFloor, affixKey: 'normal' });
+                battleState.enemyHp = battleState.currentEnemy.stats.maxHp;
+                renderStatusSummary();
+                return { lostExp };
             };
 
             const retryBattle = () => {
                 const player = getPlayerCombatant();
                 battleState.playerHp = Math.max(1, Math.floor(player.secondaryStats.MaxHP));
-                battleState.playerCp = 0;
-                battleState.enemyHp = TEST_ENEMIES[battleState.enemyIndex].stats.maxHp;
-                pushMiniLog('プレイヤー撃破 → CPを0にして即リトライ');
                 renderBattleBars();
                 renderAutoSkillDisplays();
+                persistBattleState();
+            };
+
+            const handlePlayerDefeat = () => {
+                const penaltyResult = applyDefeatPenalty();
+                pushMiniLog(`プレイヤー敗北 → Floor ${battleState.currentFloor} へ撤退 / EXP-${penaltyResult.lostExp}`);
+                showDeathOverlay({ lostExp: penaltyResult.lostExp });
+                retryBattle();
             };
 
             const performEnemyTurn = () => {
-                const enemy = TEST_ENEMIES[battleState.enemyIndex];
+                const enemy = battleState.currentEnemy;
                 const enemyCombatant = toEnemyCombatant(enemy);
                 const playerCombatant = getPlayerCombatant();
                 const attackDefinition = createAttackDefinitionFromAi(enemy.ai.defaultAttack);
@@ -2451,7 +3115,7 @@
                 });
 
                 if (battleState.playerHp <= 0) {
-                    retryBattle();
+                    handlePlayerDefeat();
                     return;
                 }
 
@@ -2497,24 +3161,49 @@
 
             const AUTO_SLOT_ORDER = Object.freeze(['auto2', 'auto1']);
 
-            const persistBattleCp = () => {
+            const persistBattleState = () => {
                 try {
-                    localStorage.setItem('battle_cp_state_v1', JSON.stringify({ playerCp: battleState.playerCp }));
+                    localStorage.setItem('battle_runtime_state_v2', JSON.stringify({
+                        currentFloor: battleState.currentFloor,
+                        playerCp: battleState.playerCp,
+                        currentEnemy: battleState.currentEnemy,
+                        equipmentState
+                    }));
                 } catch (e) {
                     // noop
                 }
             };
 
-            const loadPersistedBattleCp = () => {
+            const loadPersistedBattleState = () => {
                 try {
-                    const raw = localStorage.getItem('battle_cp_state_v1');
+                    const raw = localStorage.getItem('battle_runtime_state_v2');
                     if (!raw) {
-                        return 0;
+                        return null;
                     }
                     const parsed = JSON.parse(raw);
-                    return Number.isFinite(parsed.playerCp) ? Math.max(0, Math.floor(parsed.playerCp)) : 0;
+                    if (!parsed || typeof parsed !== 'object') {
+                        return null;
+                    }
+                    const loadedFloor = clampFloor(parsed.currentFloor);
+                    const loadedCp = Number.isFinite(parsed.playerCp) ? Math.max(0, Math.floor(parsed.playerCp)) : 0;
+                    const loadedEnemy = parsed.currentEnemy && parsed.currentEnemy.stats
+                        ? {
+                            ...parsed.currentEnemy,
+                            floor: clampFloor(parsed.currentEnemy.floor || loadedFloor),
+                            tier: toTierFromFloor(parsed.currentEnemy.floor || loadedFloor),
+                            enemyPoolIndex: Number.isFinite(parsed.currentEnemy.enemyPoolIndex) ? Math.max(0, Math.floor(parsed.currentEnemy.enemyPoolIndex)) : 0,
+                            enemyPoolSize: Number.isFinite(parsed.currentEnemy.enemyPoolSize) ? Math.max(1, Math.floor(parsed.currentEnemy.enemyPoolSize)) : 3
+                        }
+                        : null;
+                    const loadedEquipmentState = parsed.equipmentState && typeof parsed.equipmentState === 'object' ? parsed.equipmentState : null;
+                    return {
+                        currentFloor: loadedFloor,
+                        playerCp: loadedCp,
+                        currentEnemy: loadedEnemy,
+                        equipmentState: loadedEquipmentState
+                    };
                 } catch (e) {
-                    return 0;
+                    return null;
                 }
             };
 
@@ -2569,7 +3258,7 @@
             });
 
             const executePlayerSkill = ({ skill, sourceLabel, slotKey }) => {
-                const enemy = TEST_ENEMIES[battleState.enemyIndex];
+                const enemy = battleState.currentEnemy;
                 const enemyCombatant = toEnemyCombatant(enemy);
                 const playerCombatant = getPlayerCombatant();
                 const attackDefinition = resolveSkillAttackDefinition(skill.damageType);
@@ -2626,12 +3315,25 @@
                     autoSlotState[slotKey].remainingCooldown = Math.max(0, Math.floor(skill.cooldownTurns));
                 }
 
-                persistBattleCp();
+                persistBattleState();
                 renderBattleBars();
                 renderAutoSkillDisplays();
 
                 if (battleState.enemyHp <= 0) {
-                    pushMiniLog(`${enemy.name} を撃破`);
+                    const killExp = getKillExp(battleState.currentFloor);
+                    addExperience(killExp);
+                    pushMiniLog(`${enemy.name} を撃破 / EXP +${killExp}`);
+                    const dropItem = attemptEquipmentDrop({
+                        floor: battleState.currentFloor,
+                        playerCombatant,
+                        isBoss: enemy.isBoss === true
+                    });
+                    if (dropItem) {
+                        equipmentState.inventoryItems.push(dropItem);
+                        pushDropLog(`${dropItem.name} (${dropItem.mainSummary})`, dropItem.rarity);
+                        pushMiniLog(`ドロップ: ${dropItem.name} (${getSlotLabel(dropItem.slot)})`);
+                        renderInventory();
+                    }
                     advanceEnemy();
                     return;
                 }
@@ -2666,23 +3368,42 @@
                 }
 
                 pushMiniLog('CPが足りず自動スキルを発動できないためターン進行なし');
-                persistBattleCp();
+                persistBattleState();
                 renderBattleBars();
                 renderAutoSkillDisplays();
             };
 
             const initializeBattleSimulation = () => {
-                battleState.enemyIndex = 0;
-                battleState.enemyHp = TEST_ENEMIES[0].stats.maxHp;
+                const persisted = loadPersistedBattleState();
+                battleState.currentFloor = persisted ? persisted.currentFloor : 1;
+                battleState.currentEnemy = persisted && persisted.currentEnemy
+                    ? persisted.currentEnemy
+                    : buildEnemyForFloor({ floor: battleState.currentFloor, affixKey: 'normal' });
+                battleState.enemyHp = battleState.currentEnemy.stats.maxHp;
+                if (persisted && persisted.equipmentState) {
+                    equipmentState.inventoryItems = Array.isArray(persisted.equipmentState.inventoryItems) ? persisted.equipmentState.inventoryItems : [];
+                    equipmentState.equipped = {
+                        ...equipmentState.equipped,
+                        ...(persisted.equipmentState.equipped || {})
+                    };
+                    equipmentState.filter = persisted.equipmentState.filter || 'all';
+                    equipmentState.sortOrder = persisted.equipmentState.sortOrder || 'newest';
+                }
                 battleState.playerHp = Math.max(1, Math.floor(getPlayerCombatant().secondaryStats.MaxHP));
-                battleState.playerCp = loadPersistedBattleCp();
+                battleState.playerCp = persisted ? persisted.playerCp : 0;
                 battleState.miniLogs = [];
                 setAutoSlot1NormalAttackSkill(autoSlotState.auto1.skillId || 'auto_basic_attack_physical');
                 autoSlotState.auto1.remainingCooldown = 0;
                 autoSlotState.auto2.remainingCooldown = 0;
-                pushMiniLog('テスト戦闘開始: Training Slime');
+                pushMiniLog(`戦闘開始: ${battleState.currentEnemy.name} (Floor ${battleState.currentFloor})`);
+                persistBattleState();
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
+                renderStatusSummary();
                 renderBattleBars();
                 renderAutoSkillDisplays();
+                renderEquipmentSummary();
+                renderInventory();
+                setInventoryFilter(equipmentState.filter || 'all');
             };
 
             const noop = (event) => {
@@ -2798,6 +3519,11 @@
                 closeBottomMenu();
                 switchPage('feedback');
             };
+            window.revive = () => {
+                closeDeathOverlay();
+            };
+            window.setInventoryFilter = setInventoryFilter;
+            window.toggleInventorySort = toggleInventorySort;
             window.openDonateModal = noop;
             window.closeDonateModal = noop;
             window.purchaseTip = noop;
@@ -2806,9 +3532,10 @@
             document.addEventListener('DOMContentLoaded', () => {
                 setDashValues();
                 runSecondaryStatSelfTests();
-                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats });
+                renderDerivedSecondaryStats({ primaryStats: playerProgressState.primaryStats, bonusStats: getEquippedBonusStats() });
                 renderStatusSummary();
                 initializeBattleSimulation();
+                closeDeathOverlay();
                 switchPage('status');
 
                 const secondaryBreakdownBtn = document.getElementById('secondary-breakdown-btn');
@@ -2901,6 +3628,82 @@
                         });
                     }
                 });
+
+                const equipSlotModal = document.getElementById('equip-slot-modal');
+                ['equip-slot-close', 'equip-slot-close-bottom'].forEach((id) => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            closeEquipSlotModal();
+                        });
+                    }
+                });
+                if (equipSlotModal) {
+                    equipSlotModal.addEventListener('click', (event) => {
+                        if (event.target === equipSlotModal) {
+                            closeEquipSlotModal();
+                        }
+                    });
+                }
+
+                ['equip-slot-1', 'equip-slot-2'].forEach((id) => {
+                    const equipBtn = document.getElementById(id);
+                    if (equipBtn) {
+                        equipBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (!equipmentUiState.pendingEquipItemId) {
+                                return;
+                            }
+                            equipItemById(equipmentUiState.pendingEquipItemId, equipBtn.dataset.slotKey || null);
+                            closeEquipSlotModal();
+                        });
+                    }
+                });
+
+                ['equip-slot-1-compare', 'equip-slot-2-compare'].forEach((id) => {
+                    const compareBtn = document.getElementById(id);
+                    if (compareBtn) {
+                        compareBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            const item = equipmentState.inventoryItems.find((entry) => entry.instanceId === equipmentUiState.pendingEquipItemId);
+                            if (!item) {
+                                return;
+                            }
+                            openCompareModal({ candidateItem: item, slotKey: compareBtn.dataset.slotKey || item.slot });
+                        });
+                    }
+                });
+
+                ['compare-modal-close', 'compare-modal-close-bottom'].forEach((id) => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            closeCompareModal();
+                        });
+                    }
+                });
+                const compareModal = document.getElementById('compare-modal');
+                if (compareModal) {
+                    compareModal.addEventListener('click', (event) => {
+                        if (event.target === compareModal) {
+                            closeCompareModal();
+                        }
+                    });
+                }
+                const compareEquipBtn = document.getElementById('compare-modal-equip');
+                if (compareEquipBtn) {
+                    compareEquipBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        if (!equipmentUiState.pendingEquipItemId) {
+                            return;
+                        }
+                        equipItemById(equipmentUiState.pendingEquipItemId, equipmentUiState.pendingEquipSlotKey || null);
+                        closeCompareModal();
+                        closeEquipSlotModal();
+                    });
+                }
 
                 const warpModal = document.getElementById('warp-modal');
                 const warpBtn = document.getElementById('warp-btn');

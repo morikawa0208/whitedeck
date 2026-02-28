@@ -3366,16 +3366,18 @@
                 }
             };
 
-            const getPopupAnchor = ({ target = 'enemyHpBar', layer }) => {
-                const anchorId = target === 'playerHpBar' ? 'player-hp-bar' : 'enemy-hp-bar';
-                const anchor = document.getElementById(anchorId);
+            const getPopupAnchor = ({ target = 'enemy', layer }) => {
+                if (target !== 'playerHpBar') {
+                    return { leftPercent: 50, topPercent: 34 };
+                }
+                const anchor = document.getElementById('player-hp-bar');
                 if (!anchor || !layer) {
-                    return { leftPercent: 50, topPercent: target === 'playerHpBar' ? 78 : 34 };
+                    return { leftPercent: 50, topPercent: 78 };
                 }
                 const layerRect = layer.getBoundingClientRect();
                 const anchorRect = anchor.getBoundingClientRect();
                 if (layerRect.width <= 0 || layerRect.height <= 0) {
-                    return { leftPercent: 50, topPercent: target === 'playerHpBar' ? 78 : 34 };
+                    return { leftPercent: 50, topPercent: 78 };
                 }
                 const anchorCenterX = anchorRect.left + (anchorRect.width / 2);
                 const anchorCenterY = anchorRect.top + (anchorRect.height / 2);
@@ -3390,7 +3392,7 @@
             const showBattlePopup = ({
                 kind = 'physical',
                 value = '',
-                target = 'enemyHpBar',
+                target = 'enemy',
                 offsetX = null,
                 offsetY = null
             } = {}) => {
@@ -3920,7 +3922,7 @@
                 let totalCpGain = 0;
                 hitResults.forEach((hit, index) => {
                     if (!hit.isHit) {
-                        showBattlePopup({ kind: 'miss', target: 'enemyHpBar' });
+                        showBattlePopup({ kind: 'miss', target: 'enemy' });
                         pushMiniLog(`${sourceLabel}${index + 1}: ${skill.damageType === 'Magical' ? '魔法' : '物理'} MISS (命中率 ${hit.hitChancePercent.toFixed(2)}%)`);
                         return;
                     }
@@ -3946,10 +3948,10 @@
                         : (hit.critTier === CritTier.DoubleCritical
                             ? 'doubleCritical'
                             : (hit.critTier === CritTier.Critical ? 'critical' : 'physical'));
-                    showBattlePopup({ kind: popupKind, value: damage.finalDamage, target: 'enemyHpBar' });
+                    showBattlePopup({ kind: popupKind, value: damage.finalDamage, target: 'enemy' });
                     const guardRatio = damage.attackPart > 0 ? (damage.reducedDamage / damage.attackPart) : 1;
                     if (guardRatio <= GUARD_POPUP_THRESHOLD) {
-                        showBattlePopup({ kind: 'guard', target: 'enemyHpBar', offsetY: 14 });
+                        showBattlePopup({ kind: 'guard', target: 'enemy', offsetY: 14 });
                     }
                     const critLabel = skill.damageType === 'Magical'
                         ? ' / 非クリ'
@@ -3978,7 +3980,7 @@
 
                 if (battleState.enemyHp <= 0) {
                     const killExp = getKillExp(battleState.currentFloor);
-                    showBattlePopup({ kind: 'exp', value: killExp, target: 'enemyHpBar' });
+                    showBattlePopup({ kind: 'exp', value: killExp, target: 'enemy' });
                     const expResult = addExperience(killExp);
                     if (expResult.leveledUpCount > 0) {
                         showBattlePopup({ kind: 'levelUp', target: 'playerHpBar' });

@@ -790,6 +790,7 @@ const Game = {
     // --- Stage Select ---
     renderStageSelect: () => {
         State.inDungeon = false;
+        State.baseMerchantOptions = Game.generateBaseMerchantOptions();
         Game.updateHeader();
         
         let html = `

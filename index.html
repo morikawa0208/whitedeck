@@ -228,6 +228,30 @@ const STATUS_META = {
     poison: { short: '毒', kind: 'debuff', icon: 'fa-skull-crossbones' }
 };
 
+const IMPRINT_CATEGORY = {
+    rough: { name: '荒削り', rankMin: 1, rankMax: 3, icon: 'fa-gem' },
+    refined: { name: '精錬', rankMin: 2, rankMax: 4, icon: 'fa-gem' },
+    gleaming: { name: '煌めく', rankMin: 1, rankMax: 6, icon: 'fa-star' }
+};
+
+const IMPRINT_RANK_WEIGHTS = { 1: 50, 2: 30, 3: 15, 4: 8, 5: 4, 6: 1 };
+const IMPRINT_SOCKET_WEIGHTS = [
+    { value: 1, weight: 34 },
+    { value: 2, weight: 28 },
+    { value: 3, weight: 20 },
+    { value: 4, weight: 13 },
+    { value: 5, weight: 5 }
+];
+const IMPRINT_BONUS_RANGES = {
+    1: [0.0, 0.5],
+    2: [0.5, 1.5],
+    3: [2.0, 3.0],
+    4: [2.5, 4.0],
+    5: [3.5, 5.5]
+};
+const IMPRINT_COST_WEIGHT = { 1: 1.0, 2: 1.5, 3: 2.0 };
+const IMPRINT_EFFECT_KEYS = ['str', 'vit', 'dex', 'int', 'luk', 'maxHp', 'maxCp', 'atkPercent', 'defPercent'];
+
 // ==========================================
 // 2. ゲームステート
 // ==========================================
@@ -249,7 +273,13 @@ const State = {
         addedStats: { str: 0, vit: 0, dex: 0, int: 0, luk: 0 },
         skillLevels: {},
         equip: { weapon: null, armor: null, accessory: null },
-        inventory: []
+        inventory: {
+            equipment: [],
+            consumables: [],
+            materials: [],
+            imprints: [],
+            sealedImprints: { rough: 0, refined: 0, gleaming: 0 }
+        }
     },
     combat: {
         enemies: [],
@@ -272,6 +302,90 @@ const State = {
 // ==========================================
 const Utils = {
     rand: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+    weightedPick: (entries) => {
+        const total = entries.reduce((sum, e) => sum + e.weight, 0);
+        let roll = Math.random() * total;
+        for (const e of entries) {
+            roll -= e.weight;
+            if (roll <= 0) return e.value;
+        }
+        return entries[entries.length - 1].value;
+    },
+    generateId: (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+    ensureInventoryStructure: () => {
+        if (!State.player.inventory || Array.isArray(State.player.inventory)) {
+            State.player.inventory = { equipment: [], consumables: [], materials: [], imprints: [], sealedImprints: { rough: 0, refined: 0, gleaming: 0 } };
+        }
+        State.player.inventory.equipment ||= [];
+        State.player.inventory.consumables ||= [];
+        State.player.inventory.materials ||= [];
+        State.player.inventory.imprints ||= [];
+        State.player.inventory.sealedImprints ||= { rough: 0, refined: 0, gleaming: 0 };
+    },
+    ensureItemImprintSlots: (item) => {
+        if (!item || item.type === 'item') return;
+        if (!item.imprintSlots) {
+            item.imprintSlots = { capacity: ItemGen.rollSocketCapacity(), equippedImprintIds: [] };
+        }
+        item.imprintSlots.capacity = Math.max(1, Math.min(5, item.imprintSlots.capacity || 1));
+        item.imprintSlots.equippedImprintIds ||= [];
+    },
+    getImprintCostByRank: (rank) => {
+        if (rank <= 2) return 1;
+        if (rank <= 4) return 2;
+        if (rank === 5) return 3;
+        return 5;
+    },
+    getImprintRankColor: (rank) => {
+        if (rank <= 2) return 'text-gray-700 bg-gray-100 border-gray-300';
+        if (rank <= 4) return 'text-blue-700 bg-blue-50 border-blue-300';
+        if (rank === 5) return 'text-yellow-700 bg-yellow-50 border-yellow-300';
+        return 'text-pink-700 bg-gradient-to-r from-purple-50 to-pink-50 border-pink-300';
+    },
+    getImprintUsedCapacity: (equipItem) => {
+        if (!equipItem || !equipItem.imprintSlots) return 0;
+        const imprints = State.player.inventory.imprints || [];
+        return equipItem.imprintSlots.equippedImprintIds.reduce((sum, imprintId) => {
+            const imprint = imprints.find(i => i.id === imprintId);
+            return sum + (imprint ? imprint.cost : 0);
+        }, 0);
+    },
+    getEquippedImprints: () => {
+        Utils.ensureInventoryStructure();
+        const ids = [];
+        ['weapon', 'armor', 'accessory'].forEach(slot => {
+            const item = State.player.equip[slot];
+            if (!item || !item.imprintSlots) return;
+            ids.push(...item.imprintSlots.equippedImprintIds);
+        });
+        return State.player.inventory.imprints.filter(im => ids.includes(im.id));
+    },
+    getImprintEffectsSummary: () => {
+        const equipped = Utils.getEquippedImprints();
+        const grouped = {};
+        const rank6Applied = new Set();
+        let extraAttackCount = 0;
+        equipped.forEach(im => {
+            if (im.rank === 6) {
+                if (!rank6Applied.has(im.uniqueKey)) {
+                    rank6Applied.add(im.uniqueKey);
+                    if (im.effectKey === 'attackCountPlusOne') extraAttackCount += 1;
+                }
+                return;
+            }
+            grouped[im.effectKey] ||= { effectiveLv: 0, value: 0 };
+            const weight = IMPRINT_COST_WEIGHT[im.cost] || 1;
+            grouped[im.effectKey].effectiveLv += (im.rank + im.rankBonus) * weight;
+        });
+        Object.keys(grouped).forEach(key => {
+            grouped[key].value = Math.floor(grouped[key].effectiveLv);
+        });
+        return { grouped, rank6AppliedCount: rank6Applied.size, extraAttackCount };
+    },
+    getImprintStatValue: (effectKey) => {
+        const summary = Utils.getImprintEffectsSummary();
+        return summary.grouped[effectKey]?.value || 0;
+    },
     getPassiveBonus: (stat) => {
         let bonus = 0;
         const job = State.player.job;
@@ -288,22 +402,34 @@ const Utils = {
         });
         return bonus;
     },
-    getMaxHp: () => State.player.maxHp + (State.player.level * 2) + (State.player.addedStats.vit * 2) + Utils.getPassiveBonus('maxHp'),
-    getMaxCp: () => State.player.maxCp + (State.player.level * 1) + (State.player.addedStats.int * 1) + Utils.getPassiveBonus('maxCp'),
+    getMaxHp: () => State.player.maxHp + (State.player.level * 2) + (State.player.addedStats.vit * 2) + Utils.getPassiveBonus('maxHp') + Utils.getImprintStatValue('maxHp'),
+    getMaxCp: () => State.player.maxCp + (State.player.level * 1) + (State.player.addedStats.int * 1) + Utils.getPassiveBonus('maxCp') + Utils.getImprintStatValue('maxCp'),
     
     getAtk: () => {
         const str = Utils.getTotalStat('str');
         const w = State.player.equip.weapon;
-        if (!w) return str;
-        return str + Math.floor((w.minAtk + w.maxAtk) / 2);
+        const base = !w ? str : str + Math.floor((w.minAtk + w.maxAtk) / 2);
+        const atkPercent = Utils.getImprintStatValue('atkPercent');
+        return Math.floor(base * (1 + atkPercent / 100));
     },
     getAtkRange: () => {
         const str = Utils.getTotalStat('str');
         const w = State.player.equip.weapon;
-        if (!w) return { min: str, max: str };
-        return { min: str + w.minAtk, max: str + w.maxAtk };
+        const atkPercent = Utils.getImprintStatValue('atkPercent');
+        if (!w) {
+            const val = Math.floor(str * (1 + atkPercent / 100));
+            return { min: val, max: val };
+        }
+        return {
+            min: Math.floor((str + w.minAtk) * (1 + atkPercent / 100)),
+            max: Math.floor((str + w.maxAtk) * (1 + atkPercent / 100))
+        };
     },
-    getDef: () => Utils.getTotalStat('vit') + (State.player.equip.armor ? State.player.equip.armor.value : 0),
+    getDef: () => {
+        const base = Utils.getTotalStat('vit') + (State.player.equip.armor ? State.player.equip.armor.value : 0);
+        const defPercent = Utils.getImprintStatValue('defPercent');
+        return Math.floor(base * (1 + defPercent / 100));
+    },
     getBonusStat: (stat) => {
         let bonus = 0;
         ['weapon', 'armor', 'accessory'].forEach(slot => {
@@ -365,10 +491,11 @@ const Utils = {
         let val = base;
         if (Utils.hasStatus(owner, 'attackCountUp')) val += 1;
         if (Utils.hasStatus(owner, 'attackCountDown')) val -= 1;
+        val += Utils.getImprintEffectsSummary().extraAttackCount;
         return Math.max(1, val);
     },
     getTotalStat: (stat) => {
-        let base = State.player.stats[stat] + State.player.addedStats[stat] + Utils.getBonusStat(stat) + Utils.getPassiveBonus(stat);
+        let base = State.player.stats[stat] + State.player.addedStats[stat] + Utils.getBonusStat(stat) + Utils.getPassiveBonus(stat) + Utils.getImprintStatValue(stat);
         if (State.inDungeon && State.combat && State.combat.buffs) {
             const b = State.combat.buffs;
             if (stat === 'str' && b.atkUp && b.atkUp.turns > 0) base = Math.floor(base * b.atkUp.mult);
@@ -439,6 +566,7 @@ const Utils = {
 // 4. アイテム生成ロジック
 // ==========================================
 const ItemGen = {
+    rollSocketCapacity: () => Utils.weightedPick(IMPRINT_SOCKET_WEIGHTS),
     rollRarity: () => {
         const roll = Utils.rand(1, 100) + Math.floor(Utils.getTotalStat('luk') / 2);
         if (roll > 98) return 'legendary';
@@ -463,7 +591,8 @@ const ItemGen = {
             rarity: rarityKey,
             bonusStat: bonusStat,
             bonusValue: bonusValue,
-            price: Math.floor(10 * depth * rData.mult)
+            price: Math.floor(10 * depth * rData.mult),
+            imprintSlots: { capacity: ItemGen.rollSocketCapacity(), equippedImprintIds: [] }
         };
 
         if (actualType === 'weapon') {
@@ -895,13 +1024,20 @@ const Game = {
             addedStats: { str: 0, vit: 0, dex: 0, int: 0, luk: 0 },
             skillLevels: {},
             equip: { weapon: null, armor: null, accessory: null },
-            inventory: []
+            inventory: {
+                equipment: [],
+                consumables: [],
+                materials: [],
+                imprints: [],
+                sealedImprints: { rough: 0, refined: 0, gleaming: 0 }
+            }
         };
         
         Game.initPlayer('warrior');
         
-        State.player.equip.weapon = { id: 'w0', name: '錆びた剣', type: 'weapon', weaponType: 'sword', rarity: 'common', minAtk: 2, maxAtk: 4, hits: 2, target: 'single', value: 3, bonusStat: 'str', bonusValue: 0, price: 1 };
-        State.player.equip.armor = { id: 'a0', name: '古びた服', type: 'armor', rarity: 'common', value: 1, bonusStat: 'vit', bonusValue: 0, price: 1 };
+        State.player.equip.weapon = { id: 'w0', name: '錆びた剣', type: 'weapon', weaponType: 'sword', rarity: 'common', minAtk: 2, maxAtk: 4, hits: 2, target: 'single', value: 3, bonusStat: 'str', bonusValue: 0, price: 1, imprintSlots: { capacity: 1, equippedImprintIds: [] } };
+        State.player.equip.armor = { id: 'a0', name: '古びた服', type: 'armor', rarity: 'common', value: 1, bonusStat: 'vit', bonusValue: 0, price: 1, imprintSlots: { capacity: 1, equippedImprintIds: [] } };
+        Utils.ensureInventoryStructure();
 
         document.getElementById('header-floor').classList.remove('hidden');
         document.getElementById('header-gold').classList.remove('hidden');
@@ -1213,6 +1349,7 @@ const Game = {
 
         html += `
                 </div>
+                <button onclick="Game.showImprintLab()" class="p-3 mb-2 border border-indigo-300 text-indigo-700 bg-indigo-50 rounded font-bold w-full shadow"><i class="fa-solid fa-stamp mr-1"></i>刻印工房</button>
                 <button onclick="Game.renderStageSelect()" class="p-3 bg-gray-800 text-white rounded font-bold w-full shadow">ステージ選択へ戻る</button>
             </div>
         `;
@@ -1220,13 +1357,14 @@ const Game = {
     },
 
     buyBaseItem: (idx) => {
+        Utils.ensureInventoryStructure();
         const item = State.baseMerchantOptions[idx];
         if (item && State.player.gold >= item.price) {
             State.player.gold -= item.price;
             if (item.type === 'item') {
                 State.player.hp = Math.min(Utils.getMaxHp(), State.player.hp + item.value);
             } else {
-                State.player.inventory.push(item);
+                State.player.inventory.equipment.push(item);
             }
             State.baseMerchantOptions[idx] = null;
             Game.updateHeader();
@@ -1296,13 +1434,14 @@ const Game = {
     },
 
     buyItem: (idx) => {
+        Utils.ensureInventoryStructure();
         const item = State.merchantOptions[idx];
         if (State.player.gold >= item.price) {
             State.player.gold -= item.price;
             if (item.type === 'item') {
                 State.player.hp = Math.min(Utils.getMaxHp(), State.player.hp + item.value);
             } else {
-                State.player.inventory.push(item);
+                State.player.inventory.equipment.push(item);
             }
             State.merchantOptions[idx] = null;
             Game.updateHeader();
@@ -1881,8 +2020,9 @@ const Game = {
     },
 
     takeLoot: (itemObj, action) => {
+        Utils.ensureInventoryStructure();
         if (action === 'take') {
-            State.player.inventory.push(itemObj);
+            State.player.inventory.equipment.push(itemObj);
         } else if (action === 'sell') {
             const sellPrice = Math.max(1, Math.floor(itemObj.price / 2));
             State.player.gold += sellPrice;
@@ -2141,21 +2281,152 @@ const Game = {
         }, 10);
     },
 
+    addSealedImprints: (category, amount = 1) => {
+        Utils.ensureInventoryStructure();
+        State.player.inventory.sealedImprints[category] = (State.player.inventory.sealedImprints[category] || 0) + amount;
+        Game.showImprintLab();
+    },
+
+    rollImprintRank: (category) => {
+        const rule = IMPRINT_CATEGORY[category];
+        const candidates = [];
+        for (let r = rule.rankMin; r <= rule.rankMax; r++) {
+            candidates.push({ value: r, weight: IMPRINT_RANK_WEIGHTS[r] || 1 });
+        }
+        return Utils.weightedPick(candidates);
+    },
+
+    rollImprintBonus: (rank) => {
+        const range = IMPRINT_BONUS_RANGES[rank];
+        if (!range) return 0;
+        const minStep = Math.round(range[0] * 10);
+        const maxStep = Math.round(range[1] * 10);
+        return Utils.rand(minStep, maxStep) / 10;
+    },
+
+    identifyImprints: (category, count = 1) => {
+        Utils.ensureInventoryStructure();
+        const stock = State.player.inventory.sealedImprints[category] || 0;
+        const actual = Math.max(0, Math.min(stock, count));
+        if (actual <= 0) return;
+        for (let i = 0; i < actual; i++) {
+            const rank = Game.rollImprintRank(category);
+            const cost = Utils.getImprintCostByRank(rank);
+            const effectKey = rank === 6 ? 'attackCountPlusOne' : IMPRINT_EFFECT_KEYS[Utils.rand(0, IMPRINT_EFFECT_KEYS.length - 1)];
+            State.player.inventory.imprints.push({
+                id: Utils.generateId('imprint'),
+                category,
+                rank,
+                rankBonus: rank === 6 ? 0 : Game.rollImprintBonus(rank),
+                cost,
+                effectKey,
+                uniqueKey: rank === 6 ? 'rank6_attack_count_plus_1' : `normal_${effectKey}`
+            });
+        }
+        State.player.inventory.sealedImprints[category] -= actual;
+        Game.showImprintLab();
+    },
+
+    equipImprint: (slotName, imprintId) => {
+        Utils.ensureInventoryStructure();
+        const item = State.player.equip[slotName];
+        const imprint = State.player.inventory.imprints.find(im => im.id === imprintId);
+        if (!item || !imprint) return;
+        Utils.ensureItemImprintSlots(item);
+        if (item.imprintSlots.equippedImprintIds.includes(imprintId)) return;
+        const used = Utils.getImprintUsedCapacity(item);
+        if (used + imprint.cost > item.imprintSlots.capacity) {
+            alert('ソケット容量が不足しています。');
+            return;
+        }
+        item.imprintSlots.equippedImprintIds.push(imprintId);
+        Game.showInventory();
+    },
+
+    removeImprint: (slotName, imprintId) => {
+        const item = State.player.equip[slotName];
+        if (!item || !item.imprintSlots) return;
+        item.imprintSlots.equippedImprintIds = item.imprintSlots.equippedImprintIds.filter(id => id !== imprintId);
+        Game.showInventory();
+    },
+
+    showImprintLab: () => {
+        Utils.ensureInventoryStructure();
+        const sealed = State.player.inventory.sealedImprints;
+        const summary = Utils.getImprintEffectsSummary();
+        const effectRows = Object.entries(summary.grouped).map(([k, v]) => `<div class="text-[11px] text-gray-700">${k}: EffectiveLv ${v.effectiveLv.toFixed(1)} / 最終 ${v.value}</div>`).join('');
+        const renderStack = (key) => {
+            const c = IMPRINT_CATEGORY[key];
+            const qty = sealed[key] || 0;
+            return `<div class="border rounded p-2 text-xs bg-gray-50">
+                <div class="font-bold mb-1"><i class="fa-solid ${c.icon} mr-1"></i>${c.name} x${qty}</div>
+                <div class="flex gap-1">
+                    <button onclick="Game.identifyImprints('${key}',1)" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px]" ${qty < 1 ? 'disabled' : ''}>個別鑑定</button>
+                    <button onclick="Game.identifyImprints('${key}',${qty})" class="px-2 py-1 bg-indigo-500 text-white rounded text-[10px]" ${qty < 1 ? 'disabled' : ''}>一括鑑定</button>
+                </div>
+            </div>`;
+        };
+
+        let html = `<h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-stamp mr-2"></i>刻印工房（鑑定無料）</h3>
+            <div class="space-y-2 mb-3">${renderStack('rough')}${renderStack('refined')}${renderStack('gleaming')}</div>
+            <div class="flex gap-1 mb-3">
+                <button onclick="Game.addSealedImprints('rough',10)" class="px-2 py-1 border rounded text-[10px]">荒削り+10</button>
+                <button onclick="Game.addSealedImprints('refined',10)" class="px-2 py-1 border rounded text-[10px]">精錬+10</button>
+                <button onclick="Game.addSealedImprints('gleaming',10)" class="px-2 py-1 border rounded text-[10px]">煌めく+10</button>
+            </div>
+            <div class="border rounded p-2 mb-3 bg-gray-50">
+                <div class="font-bold text-xs mb-1">合算結果（刻印のみ）</div>
+                ${effectRows || '<div class="text-[11px] text-gray-400">有効な刻印効果なし</div>'}
+                <div class="text-[11px] text-pink-700 mt-1">Rank6: 攻撃回数+1（同uniqueKeyは1回のみ適用）</div>
+            </div>
+            <div class="max-h-56 overflow-y-auto space-y-2 hide-scrollbar">`;
+
+        State.player.inventory.imprints.forEach(im => {
+            const cls = Utils.getImprintRankColor(im.rank);
+            const bonusText = im.rank === 6 ? '-' : im.rankBonus.toFixed(1);
+            html += `<div class="p-2 border rounded text-xs ${cls}">
+                <div class="font-bold">${IMPRINT_CATEGORY[im.category].name} Rank${im.rank} / cost${im.cost}</div>
+                <div>effect:${im.effectKey} / bonus:${bonusText}</div>
+            </div>`;
+        });
+        html += `</div><button onclick="Game.closeModal()" class="mt-3 px-3 py-2 bg-gray-800 text-white rounded text-sm w-full">閉じる</button>`;
+        Game.showModal(html);
+    },
+
     showInventory: () => {
+        Utils.ensureInventoryStructure();
         const p = State.player;
+        const gearBag = p.inventory.equipment;
         
         const renderEquipSlot = (slotName, item, typeLabel) => {
             if (!item) return `<div class="p-2 border border-dashed rounded text-gray-400 text-xs text-center">${typeLabel} なし</div>`;
+            Utils.ensureItemImprintSlots(item);
             const rData = RARITY[item.rarity];
             const statName = item.type === 'weapon' ? 'ATK' : (item.type === 'armor' ? 'DEF' : 'BONUS');
             const itemValStr = item.type === 'weapon' ? `${item.minAtk}-${item.maxAtk}` : item.value;
+            const used = Utils.getImprintUsedCapacity(item);
+            const imprints = (item.imprintSlots?.equippedImprintIds || []).map(id => p.inventory.imprints.find(im => im.id === id)).filter(Boolean);
             return `
                 <div class="p-2 border rounded ${rData.bg} ${rData.border} text-xs relative pr-8">
                     <div class="font-bold ${rData.color} mb-1">${item.name} ${Utils.getWeaponDetailsHtml(item)}</div>
                     <div class="text-[10px] text-gray-600">${statName}:${itemValStr} / ${item.bonusStat.toUpperCase()}+${item.bonusValue}</div>
+                    <div class="text-[10px] text-gray-600 mt-1">ソケット: ${used}/${item.imprintSlots.capacity}</div>
+                    <div class="text-[10px] text-gray-500 mt-1">${imprints.length > 0 ? imprints.map(im => `R${im.rank}:${im.effectKey}`).join(' / ') : '刻印なし'}</div>
                     <button onclick="Game.unequip('${slotName}')" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500"><i class="fa-solid fa-minus-circle"></i></button>
                 </div>
             `;
+        };
+
+        const renderImprintAttach = (slotName) => {
+            const item = p.equip[slotName];
+            if (!item) return '';
+            const attached = item.imprintSlots.equippedImprintIds;
+            const options = p.inventory.imprints.filter(im => !attached.includes(im.id));
+            return `<div class="border rounded p-2 text-[10px] bg-gray-50">
+                <div class="font-bold mb-1">${slotName} 刻印装着</div>
+                <div class="space-y-1 max-h-24 overflow-y-auto">${options.length > 0 ? options.map(im => `<button onclick="Game.equipImprint('${slotName}','${im.id}')" class="w-full text-left px-2 py-1 border rounded hover:bg-white">R${im.rank} ${im.effectKey} (cost${im.cost})</button>`).join('') : '<div class="text-gray-400">装着候補なし</div>'}</div>
+                <div class="mt-1">${attached.map(id => p.inventory.imprints.find(im => im.id === id)).filter(Boolean).map(im => `<button onclick="Game.removeImprint('${slotName}','${im.id}')" class="mr-1 mt-1 px-1 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded">解除 R${im.rank}:${im.effectKey}</button>`).join('')}</div>
+            </div>`;
         };
 
         let html = `
@@ -2165,14 +2436,16 @@ const Game = {
                 ${renderEquipSlot('armor', p.equip.armor, '防具')}
                 ${renderEquipSlot('accessory', p.equip.accessory, '装飾品')}
             </div>
+            <div class="mb-4 space-y-2">${renderImprintAttach('weapon')}${renderImprintAttach('armor')}${renderImprintAttach('accessory')}</div>
+            <button onclick="Game.showImprintLab()" class="w-full mb-3 px-3 py-2 border border-indigo-300 bg-indigo-50 text-indigo-700 rounded text-xs font-bold"><i class="fa-solid fa-stamp mr-1"></i>刻印工房を開く</button>
             <h4 class="font-bold text-sm mb-2 text-gray-600 border-b pb-1">鞄の中身</h4>
             <div class="space-y-2 max-h-48 overflow-y-auto hide-scrollbar">
         `;
 
-        if (p.inventory.length === 0) {
+        if (gearBag.length === 0) {
             html += `<div class="text-center text-gray-400 text-sm py-4">空っぽ</div>`;
         } else {
-            p.inventory.forEach((item, idx) => {
+            gearBag.forEach((item, idx) => {
                 const rData = RARITY[item.rarity];
                 const statName = item.type === 'weapon' ? 'ATK' : (item.type === 'armor' ? 'DEF' : 'BONUS');
                 const itemValStr = item.type === 'weapon' ? `${item.minAtk}-${item.maxAtk}` : item.value;
@@ -2203,21 +2476,23 @@ const Game = {
     },
 
     equipItem: (invIdx) => {
-        const item = State.player.inventory[invIdx];
+        Utils.ensureInventoryStructure();
+        const item = State.player.inventory.equipment[invIdx];
         const slot = item.type;
         if (State.player.equip[slot]) {
-            State.player.inventory.push(State.player.equip[slot]);
+            State.player.inventory.equipment.push(State.player.equip[slot]);
         }
         State.player.equip[slot] = item;
-        State.player.inventory.splice(invIdx, 1);
+        State.player.inventory.equipment.splice(invIdx, 1);
         
         Game.showInventory();
         if(document.getElementById('player-info-block')) Game.renderPlayerInfo();
     },
 
     unequip: (slot) => {
+        Utils.ensureInventoryStructure();
         if (State.player.equip[slot]) {
-            State.player.inventory.push(State.player.equip[slot]);
+            State.player.inventory.equipment.push(State.player.equip[slot]);
             State.player.equip[slot] = null;
             Game.showInventory();
             if(document.getElementById('player-info-block')) Game.renderPlayerInfo();
@@ -2225,10 +2500,11 @@ const Game = {
     },
 
     sellItem: (invIdx) => {
-        const item = State.player.inventory[invIdx];
+        Utils.ensureInventoryStructure();
+        const item = State.player.inventory.equipment[invIdx];
         const sellPrice = Math.max(1, Math.floor(item.price / 2));
         State.player.gold += sellPrice;
-        State.player.inventory.splice(invIdx, 1);
+        State.player.inventory.equipment.splice(invIdx, 1);
         Game.showInventory();
         Game.updateHeader();
     }
@@ -2242,6 +2518,3 @@ window.onload = Game.init;
 </script>
 </body>
 </html>
-
-
-

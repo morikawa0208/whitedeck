@@ -1861,12 +1861,12 @@ const Game = {
                 Utils.log(`${target.name}に ${actualDmg} のダメージ！`);
             }
 
-            // CP獲得処理
+            // CP獲得処理（武器タイプ依存）
             let cpGain = 0;
-            const jobName = State.player.job.name;
-            if (jobName === '戦士') cpGain = 3;
-            else if (jobName === '魔術師') cpGain = 5;
-            else if (jobName === '盗賊') cpGain = 2;
+            const weaponType = State.player.equip.weapon?.weaponType;
+            if (weaponType === 'sword') cpGain = 4;
+            else if (weaponType === 'dagger') cpGain = 2;
+            else if (weaponType === 'staff') cpGain = 7;
             
             State.player.cp = Math.min(Utils.getMaxCp(), State.player.cp + cpGain);
             Utils.showTextAnim('player-info-block', `+${cpGain}CP`, 'heal');

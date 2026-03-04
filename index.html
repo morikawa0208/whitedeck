@@ -1504,7 +1504,11 @@ const Game = {
             
             let intentHtml = '';
             if (enemy.intent) {
-                const intentName = enemy.intent.name || (enemy.intent.type === 'attack' ? '通常攻撃' : '行動');
+                const baseIntentName = enemy.intent.name || (enemy.intent.type === 'attack' ? '通常攻撃' : (enemy.intent.type === 'defend' ? '防御' : '行動'));
+                const isSpecialIntent = !!enemy.intent.skillId;
+                const intentName = (!isSpecialIntent && typeof enemy.intent.value === 'number' && enemy.intent.value > 0)
+                    ? `${baseIntentName} ${enemy.intent.value}`
+                    : baseIntentName;
                 const intentDesc = enemy.intent.desc || (enemy.intent.value > 0 ? `予測ダメージ: ${enemy.intent.value}` : '行動情報なし');
                 intentHtml = `
                     <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 border rounded shadow text-[10px] font-bold ${enemy.intent.color} whitespace-nowrap z-10 flex items-center gap-1">
@@ -1926,6 +1930,39 @@ const Game = {
         Game.showModal(html);
     },
 
+    showConfirmModal: ({ title = '確認', message = '', confirmText = 'OK', cancelText = 'キャンセル', onConfirm = null }) => {
+        const html = `
+            <div class="p-4">
+                <h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-circle-question mr-2 text-amber-500"></i>${title}</h3>
+                <p class="text-sm text-gray-700 leading-relaxed">${message}</p>
+                <div class="mt-6 grid grid-cols-2 gap-2">
+                    <button onclick="Game.closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold text-sm hover:bg-gray-300">${cancelText}</button>
+                    <button onclick="Game.handleConfirmModal()" class="px-4 py-2 bg-blue-600 text-white rounded font-bold text-sm hover:bg-blue-700">${confirmText}</button>
+                </div>
+            </div>
+        `;
+        Game._onModalConfirm = typeof onConfirm === 'function' ? onConfirm : null;
+        Game.showModal(html);
+    },
+
+    showAlertModal: ({ title = '通知', message = '', buttonText = '閉じる' }) => {
+        const html = `
+            <div class="p-4">
+                <h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-circle-exclamation mr-2 text-red-500"></i>${title}</h3>
+                <p class="text-sm text-gray-700 leading-relaxed">${message}</p>
+                <button onclick="Game.closeModal()" class="mt-6 px-4 py-2 bg-gray-800 text-white rounded font-bold w-full shadow">${buttonText}</button>
+            </div>
+        `;
+        Game.showModal(html);
+    },
+
+    handleConfirmModal: () => {
+        const callback = Game._onModalConfirm;
+        Game._onModalConfirm = null;
+        Game.closeModal();
+        if (typeof callback === 'function') callback();
+    },
+
     // --- Reward / Map Progression ---
     showReward: () => {
         const isBoss = State.floor === 5;
@@ -2090,6 +2127,7 @@ const Game = {
     },
 
     closeModal: () => {
+        Game._onModalConfirm = null;
         document.getElementById('overlay').classList.add('hidden');
     },
 
@@ -2253,19 +2291,25 @@ const Game = {
     },
 
     resetStat: () => {
-        if(confirm('ステータスポイントをリセットしますか？')) {
-            const p = State.player;
-            let totalAdded = p.addedStats.str + p.addedStats.vit + p.addedStats.dex + p.addedStats.int + p.addedStats.luk;
-            if (totalAdded > 0) {
-                p.statPoints += totalAdded;
-                p.addedStats = { str: 0, vit: 0, dex: 0, int: 0, luk: 0 };
-                p.hp = Math.min(p.hp, Utils.getMaxHp());
-                p.cp = Math.min(p.cp, Utils.getMaxCp());
-                Game.updateHeader();
-                Game.showStatus();
-                if(document.getElementById('player-info-block')) Game.renderPlayerInfo();
+        Game.showConfirmModal({
+            title: 'ステータスリセット確認',
+            message: 'ステータスポイントをリセットしますか？',
+            confirmText: 'リセットする',
+            cancelText: 'やめる',
+            onConfirm: () => {
+                const p = State.player;
+                let totalAdded = p.addedStats.str + p.addedStats.vit + p.addedStats.dex + p.addedStats.int + p.addedStats.luk;
+                if (totalAdded > 0) {
+                    p.statPoints += totalAdded;
+                    p.addedStats = { str: 0, vit: 0, dex: 0, int: 0, luk: 0 };
+                    p.hp = Math.min(p.hp, Utils.getMaxHp());
+                    p.cp = Math.min(p.cp, Utils.getMaxCp());
+                    Game.updateHeader();
+                    Game.showStatus();
+                    if(document.getElementById('player-info-block')) Game.renderPlayerInfo();
+                }
             }
-        }
+        });
     },
 
     showLogs: () => {
@@ -2481,6 +2525,18 @@ const Game = {
                     <button onclick="Game.unequip('${slotName}')" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500"><i class="fa-solid fa-minus-circle"></i></button>
                 </div>
             `;
+        };
+
+        const renderImprintAttach = (slotName) => {
+            const item = p.equip[slotName];
+            if (!item) return '';
+            const attached = item.imprintSlots.equippedImprintIds;
+            const options = p.inventory.imprints.filter(im => !attached.includes(im.id));
+            return `<div class="border rounded p-2 text-[10px] bg-gray-50">
+                <div class="font-bold mb-1">${slotName} 刻印装着</div>
+                <div class="space-y-1 max-h-24 overflow-y-auto">${options.length > 0 ? options.map(im => `<button onclick="Game.equipImprint('${slotName}','${im.id}')" class="w-full text-left px-2 py-1 border rounded hover:bg-white">R${im.rank} ${im.effectKey} (cost${im.cost})</button>`).join('') : '<div class="text-gray-400">装着候補なし</div>'}</div>
+                <div class="mt-1">${attached.map(id => p.inventory.imprints.find(im => im.id === id)).filter(Boolean).map(im => `<button onclick="Game.removeImprint('${slotName}','${im.id}')" class="mr-1 mt-1 px-1 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded">解除 R${im.rank}:${im.effectKey}</button>`).join('')}</div>
+            </div>`;
         };
 
         let html = `

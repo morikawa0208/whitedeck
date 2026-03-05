@@ -1318,6 +1318,7 @@ const Game = {
             let details = '';
             let style = 'bg-gray-50 border-gray-300';
             if (item.type !== 'item') {
+                Utils.ensureItemImprintSlots(item);
                 const rData = RARITY[item.rarity];
                 style = `${rData.bg} ${rData.border} ${rData.color}`;
                 const statName = item.type === 'weapon' ? 'ATK' : (item.type === 'armor' ? 'DEF' : 'BONUS');
@@ -1334,6 +1335,7 @@ const Game = {
 
                 details = `
                     <div class="text-xs">[${rData.name}] ${statName}:${itemValStr} / ${item.bonusStat.toUpperCase()}+${item.bonusValue} ${diffHtml}</div>
+                    <div class="text-[10px] mt-0.5"><i class="fa-solid fa-plug-circle-bolt mr-1"></i>ソケット:${item.imprintSlots.capacity}</div>
                     <div class="text-[9px] text-gray-500 mt-0.5">現在: ${currStr}</div>
                 `;
             } else {
@@ -1396,6 +1398,7 @@ const Game = {
             let details = '';
             let style = 'bg-gray-50 border-gray-300';
             if (item.type !== 'item') {
+                Utils.ensureItemImprintSlots(item);
                 const rData = RARITY[item.rarity];
                 style = `${rData.bg} ${rData.border} ${rData.color}`;
                 const statName = item.type === 'weapon' ? 'ATK' : (item.type === 'armor' ? 'DEF' : 'BONUS');
@@ -1412,6 +1415,7 @@ const Game = {
 
                 details = `
                     <div class="text-xs">[${rData.name}] ${statName}:${itemValStr} / ${item.bonusStat.toUpperCase()}+${item.bonusValue} ${diffHtml}</div>
+                    <div class="text-[10px] mt-0.5"><i class="fa-solid fa-plug-circle-bolt mr-1"></i>ソケット:${item.imprintSlots.capacity}</div>
                     <div class="text-[9px] text-gray-500 mt-0.5">現在: ${currStr}</div>
                 `;
             } else {
@@ -2566,9 +2570,11 @@ const Game = {
             html += `<div class="text-center text-gray-400 text-sm py-4">空っぽ</div>`;
         } else {
             gearBag.forEach((item, idx) => {
+                Utils.ensureItemImprintSlots(item);
                 const rData = RARITY[item.rarity];
                 const statName = item.type === 'weapon' ? 'ATK' : (item.type === 'armor' ? 'DEF' : 'BONUS');
                 const itemValStr = item.type === 'weapon' ? `${item.minAtk}-${item.maxAtk}` : item.value;
+                const used = Utils.getImprintUsedCapacity(item);
                 
                 let diffHtml = '';
                 if (item.type !== 'item') {
@@ -2582,6 +2588,7 @@ const Game = {
                         <div class="flex-1 pr-2">
                             <div class="font-bold ${rData.color} mb-1">${item.name} ${Utils.getWeaponDetailsHtml(item)}</div>
                             <div class="text-[10px] text-gray-600">${statName}:${itemValStr} / ${item.bonusStat.toUpperCase()}+${item.bonusValue} ${diffHtml}</div>
+                            ${item.type !== 'item' ? `<div class="text-[10px] text-gray-600 mt-1"><i class="fa-solid fa-plug-circle-bolt mr-1"></i>ソケット: ${used}/${item.imprintSlots.capacity}</div>` : ''}
                         </div>
                         <div class="shrink-0 flex items-center space-x-1">
                             <button onclick="Game.equipItem(${idx})" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px] font-bold">装備</button>

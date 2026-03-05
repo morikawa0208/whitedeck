@@ -2431,8 +2431,6 @@ const Game = {
     renderImprintLabContent: (filterRank = 0) => {
         Utils.ensureInventoryStructure();
         const sealed = State.player.inventory.sealedImprints;
-        const summary = Utils.getImprintEffectsSummary();
-        const summaryOpen = !!State.inventoryImprintSummaryOpen;
         const effectLabelMap = {
             str: 'STR', vit: 'VIT', dex: 'DEX', int: 'INT', luk: 'LUK',
             maxHp: 'MaxHP', maxCp: 'MaxCP', atkPercent: 'ATK%', defPercent: 'DEF%'
@@ -2444,11 +2442,17 @@ const Game = {
         const slotLabelMap = { weapon: '武器', armor: '防具', accessory: '装飾品' };
         const slotRows = ['weapon', 'armor', 'accessory'].map(slot => {
             const item = State.player.equip[slot];
-            if (!item) return `<div class="text-[11px] text-gray-500">${slotLabelMap[slot]}: 装備なし</div>`;
+            if (!item) return `<div class="text-[11px] text-gray-500 px-2 py-1 bg-white border rounded">${slotLabelMap[slot]}: 装備なし</div>`;
             Utils.ensureItemImprintSlots(item);
             const used = Utils.getImprintUsedCapacity(item);
             return `<div class="text-[11px] text-gray-700 px-2 py-1 bg-white border rounded">${slotLabelMap[slot]} ${used}/${item.imprintSlots.capacity}</div>`;
         }).join('');
+
+        const summary = Utils.getImprintEffectsSummary();
+        const totalSummary = Object.entries(summary.grouped).map(([key, v]) => {
+            const remain = (Math.ceil(v.effectiveLv) - v.effectiveLv).toFixed(1);
+            return `${effectLabelMap[key] || key} Lv${v.effectiveLv.toFixed(1)} (最終${v.value} / 次まで${remain})`;
+        }).join(' / ') || '有効な刻印効果なし';
 
         const sumLines = {};
         ['weapon', 'armor', 'accessory'].forEach(slot => {
@@ -2464,18 +2468,19 @@ const Game = {
                 sumLines[key].push({ label: slotLabelMap[slot], value });
             });
         });
-        const totalSummary = Object.entries(summary.grouped).map(([key, v]) => `${effectLabelMap[key] || key}:${v.value}`).join(' / ') || '有効な刻印効果なし';
-        const sumRows = Object.entries(sumLines).map(([key, lines]) => {
+        const detailRows = Object.entries(sumLines).map(([key, lines]) => {
             const totalEffective = lines.reduce((acc, line) => acc + line.value, 0);
             const totalFinal = Math.floor(totalEffective);
+            const remain = (Math.ceil(totalEffective) - totalEffective).toFixed(1);
             const detail = lines.map(line => `<div>${line.label}: ${line.value.toFixed(1)}</div>`).join('');
             return `<div class="border rounded p-2 bg-white">
                 <div class="font-bold text-[11px] mb-1">${effectLabelMap[key] || key}</div>
                 <div class="text-[11px] text-gray-700 space-y-0.5">${detail}</div>
                 <div class="text-[11px] text-gray-700 border-t mt-1 pt-1">────────</div>
-                <div class="text-[11px] font-bold text-blue-700">合計: EffectiveLv ${totalEffective.toFixed(1)} → 最終 ${totalFinal}</div>
+                <div class="text-[11px] font-bold text-blue-700">合計: EffectLv ${totalEffective.toFixed(1)} / 最終 ${totalFinal} / 次まで ${remain}</div>
             </div>`;
         }).join('');
+
         const renderStack = (key) => {
             const c = IMPRINT_CATEGORY[key];
             const qty = sealed[key] || 0;
@@ -2492,9 +2497,7 @@ const Game = {
         const groupedMap = {};
         State.player.inventory.imprints.forEach(im => {
             const sig = `${im.category}|${im.rank}|${im.cost}|${im.effectKey}|${im.rankBonus}|${im.uniqueKey}`;
-            if (!groupedMap[sig]) {
-                groupedMap[sig] = { ...im, count: 0, freeCount: 0, signature: sig };
-            }
+            if (!groupedMap[sig]) groupedMap[sig] = { ...im, count: 0, freeCount: 0, signature: sig };
             groupedMap[sig].count += 1;
             if (!equippedIds.has(im.id)) groupedMap[sig].freeCount += 1;
         });
@@ -2516,9 +2519,11 @@ const Game = {
         let html = `<h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-stamp mr-2"></i>刻印工房</h3>
             <div class="border rounded p-2 mb-3 bg-gray-50">
                 <div class="font-bold text-xs mb-1">合算結果（武器・防具・装飾品すべて）</div>
-                <div class="text-[11px] text-blue-700 font-bold mb-2">${totalSummary}</div>
-                <button onclick="Game.toggleImprintSummary()" class="w-full mb-2 py-1 border border-gray-300 bg-white rounded text-[10px] font-bold">${summaryOpen ? '詳細を閉じる' : '詳細を開く'}</button>
-                ${summaryOpen ? `<div class="mb-2 flex gap-1 flex-wrap">${slotRows}</div><div class="space-y-2">${sumRows || '<div class="text-[11px] text-gray-400">有効な刻印効果なし</div>'}</div>` : ''}
+                <div class="mb-2 flex gap-1 flex-wrap">${slotRows}</div>
+                <div class="text-[11px] text-blue-700 font-bold mb-2 flex items-center justify-between gap-2">
+                    <span class="flex-1">${totalSummary}</span>
+                    <button onclick="Game.showImprintSummaryDetail()" class="w-6 h-6 shrink-0 rounded-full border border-blue-300 bg-white text-blue-700"><i class="fa-solid fa-circle-info"></i></button>
+                </div>
             </div>
             <div class="border rounded p-2 mb-2 bg-white">
                 <div class="flex items-center justify-between mb-2">
@@ -2558,6 +2563,11 @@ const Game = {
 
         html += `</div></div>`;
 
+        const detailModalHtml = `<h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-circle-info mr-2"></i>合算詳細</h3>
+            <div class="mb-2 flex gap-1 flex-wrap">${slotRows}</div>
+            <div class="space-y-2">${detailRows || '<div class="text-[11px] text-gray-400">有効な刻印効果なし</div>'}</div>
+            <button onclick="Game.closeModal()" class="mt-3 px-3 py-2 bg-gray-800 text-white rounded text-sm w-full">閉じる</button>`;
+
         const identifyBarHtml = `<div class="border-t bg-white p-2 shrink-0">
             <div class="grid grid-cols-3 gap-1">${renderStack('rough')}${renderStack('refined')}${renderStack('gleaming')}</div>
             <div class="grid grid-cols-3 gap-1 mt-1">
@@ -2567,17 +2577,17 @@ const Game = {
             </div>
         </div>`;
 
-        return { contentHtml: html, identifyBarHtml };
+        return { contentHtml: html, identifyBarHtml, detailModalHtml };
+    },
+
+    showImprintSummaryDetail: () => {
+        const imprintView = Game.renderImprintLabContent(State.inventoryImprintFilterRank || 0);
+        Game.showModal(imprintView.detailModalHtml);
     },
 
     showImprintLab: (filterRank = 0) => {
         State.inventoryTab = 'imprint';
         State.inventoryImprintFilterRank = filterRank;
-        Game.showInventory('imprint');
-    },
-
-    toggleImprintSummary: () => {
-        State.inventoryImprintSummaryOpen = !State.inventoryImprintSummaryOpen;
         Game.showInventory('imprint');
     },
 

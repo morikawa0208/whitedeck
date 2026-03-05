@@ -2431,9 +2431,15 @@ const Game = {
     renderImprintLabContent: (filterRank = 0) => {
         Utils.ensureInventoryStructure();
         const sealed = State.player.inventory.sealedImprints;
+        const summary = Utils.getImprintEffectsSummary();
+        const summaryOpen = !!State.inventoryImprintSummaryOpen;
         const effectLabelMap = {
             str: 'STR', vit: 'VIT', dex: 'DEX', int: 'INT', luk: 'LUK',
             maxHp: 'MaxHP', maxCp: 'MaxCP', atkPercent: 'ATK%', defPercent: 'DEF%'
+        };
+        const imprintNameMap = {
+            str: 'STRの刻印', vit: 'VITの刻印', dex: 'DEXの刻印', int: 'INTの刻印', luk: 'LUKの刻印',
+            maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印', attackCountPlusOne: '攻撃回数の刻印'
         };
         const slotLabelMap = { weapon: '武器', armor: '防具', accessory: '装飾品' };
         const slotRows = ['weapon', 'armor', 'accessory'].map(slot => {
@@ -2441,7 +2447,7 @@ const Game = {
             if (!item) return `<div class="text-[11px] text-gray-500">${slotLabelMap[slot]}: 装備なし</div>`;
             Utils.ensureItemImprintSlots(item);
             const used = Utils.getImprintUsedCapacity(item);
-            return `<div class="text-[11px] text-gray-700">${slotLabelMap[slot]}: ${used}/${item.imprintSlots.capacity}</div>`;
+            return `<div class="text-[11px] text-gray-700 px-2 py-1 bg-white border rounded">${slotLabelMap[slot]} ${used}/${item.imprintSlots.capacity}</div>`;
         }).join('');
 
         const sumLines = {};
@@ -2458,6 +2464,7 @@ const Game = {
                 sumLines[key].push({ label: slotLabelMap[slot], value });
             });
         });
+        const totalSummary = Object.entries(summary.grouped).map(([key, v]) => `${effectLabelMap[key] || key}:${v.value}`).join(' / ') || '有効な刻印効果なし';
         const sumRows = Object.entries(sumLines).map(([key, lines]) => {
             const totalEffective = lines.reduce((acc, line) => acc + line.value, 0);
             const totalFinal = Math.floor(totalEffective);
@@ -2472,11 +2479,11 @@ const Game = {
         const renderStack = (key) => {
             const c = IMPRINT_CATEGORY[key];
             const qty = sealed[key] || 0;
-            return `<div class="border rounded p-2 text-xs bg-gray-50">
+            return `<div class="border rounded p-2 text-[10px] bg-gray-50">
                 <div class="font-bold mb-1"><i class="fa-solid ${c.icon} mr-1"></i>${c.name} x${qty}</div>
                 <div class="flex gap-1">
-                    <button onclick="Game.identifyImprints('${key}',1)" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px]" ${qty < 1 ? 'disabled' : ''}>個別鑑定</button>
-                    <button onclick="Game.identifyImprints('${key}',${qty})" class="px-2 py-1 bg-indigo-500 text-white rounded text-[10px]" ${qty < 1 ? 'disabled' : ''}>一括鑑定</button>
+                    <button onclick="Game.identifyImprints('${key}',1)" class="flex-1 px-1 py-1 bg-blue-500 text-white rounded" ${qty < 1 ? 'disabled' : ''}>個別</button>
+                    <button onclick="Game.identifyImprints('${key}',${qty})" class="flex-1 px-1 py-1 bg-indigo-500 text-white rounded" ${qty < 1 ? 'disabled' : ''}>一括</button>
                 </div>
             </div>`;
         };
@@ -2506,17 +2513,12 @@ const Game = {
             return `<button onclick="Game.showImprintLab(${rank})" class="px-2 py-1 rounded text-[10px] border ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300'}">${label}</button>`;
         }).join('');
 
-        let html = `<h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-stamp mr-2"></i>刻印工房（鑑定無料）</h3>
-            <div class="space-y-2 mb-3">${renderStack('rough')}${renderStack('refined')}${renderStack('gleaming')}</div>
-            <div class="flex gap-1 mb-3">
-                <button onclick="Game.addSealedImprints('rough',10)" class="px-2 py-1 border rounded text-[10px]">荒削り+10</button>
-                <button onclick="Game.addSealedImprints('refined',10)" class="px-2 py-1 border rounded text-[10px]">精錬+10</button>
-                <button onclick="Game.addSealedImprints('gleaming',10)" class="px-2 py-1 border rounded text-[10px]">煌めく+10</button>
-            </div>
+        let html = `<h3 class="font-bold text-lg mb-3 border-b pb-2"><i class="fa-solid fa-stamp mr-2"></i>刻印工房</h3>
             <div class="border rounded p-2 mb-3 bg-gray-50">
                 <div class="font-bold text-xs mb-1">合算結果（武器・防具・装飾品すべて）</div>
-                <div class="mb-2">${slotRows}</div>
-                <div class="space-y-2">${sumRows || '<div class="text-[11px] text-gray-400">有効な刻印効果なし</div>'}</div>
+                <div class="text-[11px] text-blue-700 font-bold mb-2">${totalSummary}</div>
+                <button onclick="Game.toggleImprintSummary()" class="w-full mb-2 py-1 border border-gray-300 bg-white rounded text-[10px] font-bold">${summaryOpen ? '詳細を閉じる' : '詳細を開く'}</button>
+                ${summaryOpen ? `<div class="mb-2 flex gap-1 flex-wrap">${slotRows}</div><div class="space-y-2">${sumRows || '<div class="text-[11px] text-gray-400">有効な刻印効果なし</div>'}</div>` : ''}
             </div>
             <div class="border rounded p-2 mb-2 bg-white">
                 <div class="flex items-center justify-between mb-2">
@@ -2524,7 +2526,7 @@ const Game = {
                     <div class="text-[10px] text-gray-500">所持 ${State.player.inventory.imprints.length} 個</div>
                 </div>
                 <div class="flex flex-wrap gap-1 mb-2">${rankFilterButtons}</div>
-                <div class="max-h-56 overflow-y-auto space-y-2 hide-scrollbar">`;
+                <div class="space-y-2">`;
 
         if (groupedList.length === 0) {
             html += `<div class="text-center text-gray-400 text-xs py-4">条件に合う刻印がありません</div>`;
@@ -2537,7 +2539,7 @@ const Game = {
                 html += `<div class="p-2 border rounded text-xs ${cls}">
                     <div class="flex justify-between items-start gap-2">
                         <div>
-                            <div class="font-bold">${IMPRINT_CATEGORY[im.category].name} Rank${im.rank} / cost${im.cost} ×${im.count}</div>
+                            <div class="font-bold">${imprintNameMap[im.effectKey] || `${im.effectKey}の刻印`} Rank${im.rank} / cost${im.cost} ×${im.count}</div>
                             <div>effect:${im.effectKey} / bonus:${bonusText} / value:${unitValue}</div>
                             <div class="text-[10px] text-gray-600">売却可能 ${im.freeCount} 個（装着中 ${im.count - im.freeCount} 個）</div>
                         </div>
@@ -2555,12 +2557,22 @@ const Game = {
         }
 
         html += `</div></div>`;
-        return html;
+
+        const identifyBarHtml = `<div class="border-t bg-white p-2 shrink-0">
+            <div class="grid grid-cols-3 gap-1">${renderStack('rough')}${renderStack('refined')}${renderStack('gleaming')}</div>
+        </div>`;
+
+        return { contentHtml: html, identifyBarHtml };
     },
 
     showImprintLab: (filterRank = 0) => {
         State.inventoryTab = 'imprint';
         State.inventoryImprintFilterRank = filterRank;
+        Game.showInventory('imprint');
+    },
+
+    toggleImprintSummary: () => {
+        State.inventoryImprintSummaryOpen = !State.inventoryImprintSummaryOpen;
         Game.showInventory('imprint');
     },
 
@@ -2602,8 +2614,11 @@ const Game = {
         };
 
         let contentHtml = '';
+        let fixedPanelHtml = '';
         if (activeTab === 'imprint') {
-            contentHtml = `<div class="p-3">${Game.renderImprintLabContent(State.inventoryImprintFilterRank || 0)}</div>`;
+            const imprintView = Game.renderImprintLabContent(State.inventoryImprintFilterRank || 0);
+            contentHtml = `<div class="p-3">${imprintView.contentHtml}</div>`;
+            fixedPanelHtml = imprintView.identifyBarHtml;
         } else {
             contentHtml = `
                 <div class="p-3">
@@ -2644,6 +2659,7 @@ const Game = {
         const html = `
             <div class="flex-1 flex flex-col bg-white">
                 <div class="flex-1 overflow-y-auto hide-scrollbar">${contentHtml}</div>
+                ${fixedPanelHtml}
                 <div class="grid grid-cols-4 border-t shrink-0">
                     ${renderTabButton('weapon', 'fa-sword')}
                     ${renderTabButton('armor', 'fa-shield-halved')}

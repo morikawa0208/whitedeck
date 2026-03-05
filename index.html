@@ -251,6 +251,7 @@ const IMPRINT_BONUS_RANGES = {
 };
 const IMPRINT_COST_WEIGHT = { 1: 1.0, 2: 1.5, 3: 2.0 };
 const IMPRINT_EFFECT_KEYS = ['str', 'vit', 'dex', 'int', 'luk', 'maxHp', 'maxCp', 'atkPercent', 'defPercent'];
+const IMPRINT_RANK6_EFFECT_KEYS = ['normalHitCtReduce', 'halfSkillCpCost', 'attackCountPlusTwo', 'halfDefensePierce', 'poisonPercentDamage', 'drainRateUp', 'halfPotionCpCost', 'doubleCpGain', 'doubleImprintDrop', 'turnStartDefBlock', 'turnEndHalfAtkAoe'];
 
 // ==========================================
 // 2. ゲームステート
@@ -364,12 +365,14 @@ const Utils = {
         const equipped = Utils.getEquippedImprints();
         const grouped = {};
         const rank6Applied = new Set();
+        const rank6Effects = {};
         let extraAttackCount = 0;
         equipped.forEach(im => {
             if (im.rank === 6) {
                 if (!rank6Applied.has(im.uniqueKey)) {
                     rank6Applied.add(im.uniqueKey);
-                    if (im.effectKey === 'attackCountPlusOne') extraAttackCount += 1;
+                    rank6Effects[im.effectKey] = true;
+                    if (im.effectKey === 'attackCountPlusTwo') extraAttackCount += 2;
                 }
                 return;
             }
@@ -380,7 +383,7 @@ const Utils = {
         Object.keys(grouped).forEach(key => {
             grouped[key].value = Math.floor(grouped[key].effectiveLv);
         });
-        return { grouped, rank6AppliedCount: rank6Applied.size, extraAttackCount };
+        return { grouped, rank6AppliedCount: rank6Applied.size, rank6Effects, extraAttackCount };
     },
     getImprintStatValue: (effectKey) => {
         const summary = Utils.getImprintEffectsSummary();
@@ -882,6 +885,15 @@ const EnemyLogic = {
                 for(let id in State.combat.cooldowns) {
                     if(State.combat.cooldowns[id] > 0) State.combat.cooldowns[id]--;
                 }
+
+                const imprintSummary = Utils.getImprintEffectsSummary();
+                if (imprintSummary.rank6Effects?.turnStartDefBlock) {
+                    const defVal = Utils.getDef();
+                    const cap = defVal;
+                    State.player.block = Math.min(cap, State.player.block + defVal);
+                    Utils.log(`刻印効果: 防御の障壁 (+${defVal} / 上限${cap})`);
+                    Utils.showTextAnim('player-hp-bar', `+${defVal}B`, 'block');
+                }
                 
                 State.combat.enemies.forEach(e => {
                     EnemyLogic.decideIntent(e);
@@ -898,7 +910,13 @@ const EnemyLogic = {
                 // 毒ダメージ処理
                 const poisonTicks = (enemy.statuses || []).filter(st => st.id === 'poison' && st.turns > 0);
                 if (poisonTicks.length > 0) {
-                    const poisonDmg = poisonTicks.reduce((sum, st) => sum + (st.fixedValue || 0), 0);
+                    const imprintSummary = Utils.getImprintEffectsSummary();
+                    const poisonDmg = poisonTicks.reduce((sum, st) => {
+                        if (imprintSummary.rank6Effects?.poisonPercentDamage) {
+                            return sum + Math.max(1, Math.floor(enemy.maxHp * 0.05));
+                        }
+                        return sum + (st.fixedValue || 0);
+                    }, 0);
                     enemy.hp -= poisonDmg;
                     Utils.showTextAnim(`en-${enemy.id}`, `-${poisonDmg}`, 'damage');
                     Utils.log(`${enemy.name}は毒で ${poisonDmg} のダメージ!`);
@@ -970,8 +988,11 @@ const EnemyLogic = {
         processNextEnemy();
     },
     applyDamageToEnemy: (enemy, damage, isPierce = false) => {
+        const imprintSummary = Utils.getImprintEffectsSummary();
+        const halfDefensePierce = !!imprintSummary.rank6Effects?.halfDefensePierce;
+        const effectivePierce = isPierce || halfDefensePierce;
         let actualDmg = damage;
-        if (!isPierce && enemy.block > 0) {
+        if (!effectivePierce && enemy.block > 0) {
             if (enemy.block >= actualDmg) {
                 enemy.block -= actualDmg;
                 actualDmg = 0;
@@ -1652,6 +1673,8 @@ const Game = {
         }
 
         const btnClass = "border shadow-sm rounded font-bold text-xs flex flex-col items-center justify-center p-1.5 transition-colors active:scale-95 relative";
+        const imprintSummary = Utils.getImprintEffectsSummary();
+        const potionCost = imprintSummary.rank6Effects?.halfPotionCpCost ? 5 : 10;
 
         let html = `
             <div class="grid grid-cols-4 gap-1 shrink-0">
@@ -1664,7 +1687,7 @@ const Game = {
                     <i class="fa-solid fa-shield mb-1"></i> <span class="text-[10px] truncate w-full text-center">${defendName}</span>
                 </button>
                 <button onclick="Game.usePotion()" class="${btnClass} bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
-                    <i class="fa-solid fa-flask mb-1"></i> 回復<span class="text-[9px] font-normal mt-0.5">(10CP)</span>
+                    <i class="fa-solid fa-flask mb-1"></i> 回復<span class="text-[9px] font-normal mt-0.5">(${potionCost}CP)</span>
                 </button>
                 <button onclick="Game.endPlayerTurn()" class="${btnClass} bg-gray-800 text-white border-gray-900 hover:bg-gray-700">
                     <i class="fa-solid fa-forward-step mb-1"></i> ターン終了
@@ -1678,7 +1701,8 @@ const Game = {
             skills.forEach(s => {
                 const lv = State.player.skillLevels[s.id];
                 const ct = State.combat.cooldowns[s.id] || 0;
-                const canUse = State.player.cp >= s.cost && ct === 0 && !isSealed && !isFrozen;
+                const displayCost = imprintSummary.rank6Effects?.halfSkillCpCost ? Math.floor(s.cost / 2) : s.cost;
+                const canUse = State.player.cp >= displayCost && ct === 0 && !isSealed && !isFrozen;
                 const skillBtnClass = canUse ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed';
                 
                 html += `
@@ -1686,7 +1710,7 @@ const Game = {
                         <i class="fa-solid fa-circle-info absolute top-1 right-1 text-gray-400 hover:text-blue-500 text-[10px] z-10" onclick="event.stopPropagation(); Game.showInfoModal('${s.name}', '${s.desc(lv)}')"></i>
                         <div class="leading-tight pr-4">
                             <div class="font-bold text-xs">${s.name} <span class="text-[9px] font-normal opacity-70">Lv${lv}</span></div>
-                            <div class="text-[9px] opacity-80">消費:${s.cost} 獲得:${s.gain}</div>
+                            <div class="text-[9px] opacity-80">消費:${displayCost} 獲得:${s.gain}</div>
                         </div>
                         <div class="text-xs font-bold pl-1 mt-1">
                             ${ct > 0 ? `<span class="text-red-500">CT:${ct}</span>` : `<i class="fa-solid fa-play opacity-50"></i>`}
@@ -1713,7 +1737,9 @@ const Game = {
         if (Utils.hasStatus({ statuses: State.combat.playerStatuses }, 'freeze')) { Utils.log('凍結中は行動できない!'); return; }
         const lv = State.player.skillLevels[s.id];
         
-        State.player.cp -= s.cost;
+        const imprintSummary = Utils.getImprintEffectsSummary();
+        const skillCost = imprintSummary.rank6Effects?.halfSkillCpCost ? Math.floor(s.cost / 2) : s.cost;
+        State.player.cp -= skillCost;
         State.player.cp = Math.min(Utils.getMaxCp(), State.player.cp + s.gain);
         State.combat.cooldowns[s.id] = s.ct;
         Game.renderCommands();
@@ -1781,7 +1807,8 @@ const Game = {
         } else if (s.id === 'm_s2') {
             const dmg = Math.max(1, Math.floor(int * 0.5));
             const actual = EnemyLogic.applyDamageToEnemy(target, dmg, true);
-            const heal = 5 + lv * 5;
+            const drainRate = imprintSummary.rank6Effects?.drainRateUp ? 1.5 : 1;
+            const heal = Math.floor((5 + lv * 5) * drainRate);
             State.player.cp = Math.min(Utils.getMaxCp(), State.player.cp + heal);
             Utils.log(`${s.name}！ ${actual}ダメを与え CPが ${heal} 回復！`);
             Utils.showTextAnim('player-hp-bar', `+${heal}CP`, 'block');
@@ -1800,9 +1827,11 @@ const Game = {
     usePotion: () => {
         if (!State.combat.isPlayerTurn) return;
         if (Utils.hasStatus({ statuses: State.combat.playerStatuses }, 'freeze')) { Utils.log('凍結中は行動できない!'); return; }
-        if(State.player.cp < 10) { Utils.log("CPが足りません"); return; }
+        const imprintSummary = Utils.getImprintEffectsSummary();
+        const potionCost = imprintSummary.rank6Effects?.halfPotionCpCost ? 5 : 10;
+        if(State.player.cp < potionCost) { Utils.log("CPが足りません"); return; }
         
-        State.player.cp -= 10;
+        State.player.cp -= potionCost;
         Game.renderCommands();
 
         const heal = Math.floor(Utils.getTotalStat('int') * 2) + 10;
@@ -1858,18 +1887,22 @@ const Game = {
             const isAll = w && w.target === 'all';
             const atkRange = Utils.getAtkRange();
 
+            const imprintSummary = Utils.getImprintEffectsSummary();
+            let hitCount = 0;
             if (isAll) {
                 Utils.log(`全体攻撃！`);
                 State.combat.enemies.forEach(e => {
                     if(e.hp > 0) {
                         const dmg = Math.max(1, Utils.rand(atkRange.min, atkRange.max));
                         const actualDmg = EnemyLogic.applyDamageToEnemy(e, dmg);
+                        if (actualDmg > 0) hitCount++;
                         Utils.log(`${e.name}に ${actualDmg} のダメージ！`);
                     }
                 });
             } else {
                 const dmg = Math.max(1, Utils.rand(atkRange.min, atkRange.max));
                 const actualDmg = EnemyLogic.applyDamageToEnemy(target, dmg);
+                if (actualDmg > 0) hitCount++;
                 Utils.log(`${target.name}に ${actualDmg} のダメージ！`);
             }
 
@@ -1880,8 +1913,16 @@ const Game = {
             else if (weaponType === 'dagger') cpGain = 2;
             else if (weaponType === 'staff') cpGain = 7;
             
+            if (imprintSummary.rank6Effects?.doubleCpGain) cpGain *= 2;
             State.player.cp = Math.min(Utils.getMaxCp(), State.player.cp + cpGain);
             Utils.showTextAnim('player-info-block', `+${cpGain}CP`, 'heal');
+
+            if (imprintSummary.rank6Effects?.normalHitCtReduce && hitCount > 0) {
+                for(let id in State.combat.cooldowns) {
+                    State.combat.cooldowns[id] = Math.max(0, (State.combat.cooldowns[id] || 0) - hitCount);
+                }
+                Utils.log(`刻印効果: 通常攻撃命中によりCT-${hitCount}`);
+            }
 
             State.combat.attacksLeft--;
             Game.renderCommands();
@@ -1903,7 +1944,13 @@ const Game = {
         const playerStatusOwner = { statuses: State.combat.playerStatuses || [] };
         const poisonTicks = playerStatusOwner.statuses.filter(st => st.id === 'poison' && st.turns > 0);
         if (poisonTicks.length > 0) {
-            const poisonDmg = poisonTicks.reduce((sum, st) => sum + (st.fixedValue || 0), 0);
+            const imprintSummary = Utils.getImprintEffectsSummary();
+            const poisonDmg = poisonTicks.reduce((sum, st) => {
+                if (imprintSummary.rank6Effects?.poisonPercentDamage) {
+                    return sum + Math.max(1, Math.floor(Utils.getMaxHp() * 0.05));
+                }
+                return sum + (st.fixedValue || 0);
+            }, 0);
             State.player.hp = Math.max(0, State.player.hp - poisonDmg);
             Utils.log(`プレイヤーは毒で ${poisonDmg} ダメージを受けた!`);
             Utils.showTextAnim('player-hp-bar', `-${poisonDmg}`, 'damage');
@@ -1912,6 +1959,16 @@ const Game = {
                 Game.gameOver();
                 return;
             }
+        }
+
+        const imprintSummary = Utils.getImprintEffectsSummary();
+        if (imprintSummary.rank6Effects?.turnEndHalfAtkAoe) {
+            const splashDmg = Math.max(1, Math.floor(Utils.getAtk() * 0.5));
+            State.combat.enemies.forEach(e => {
+                if (e.hp > 0) EnemyLogic.applyDamageToEnemy(e, splashDmg, true);
+            });
+            Utils.log(`刻印効果: ターン終了時追撃で敵全体に ${splashDmg} ダメージ！`);
+            if (EnemyLogic.checkWin()) return;
         }
 
         State.combat.isPlayerTurn = false;
@@ -1996,6 +2053,8 @@ const Game = {
                 imprintDropCategory = rarityRoll <= 60 ? 'rough' : (rarityRoll <= 92 ? 'refined' : 'gleaming');
                 imprintDropCount = 1;
             }
+            const imprintSummary = Utils.getImprintEffectsSummary();
+            if (imprintSummary.rank6Effects?.doubleImprintDrop) imprintDropCount *= 2;
             State.player.inventory.sealedImprints[imprintDropCategory] = (State.player.inventory.sealedImprints[imprintDropCategory] || 0) + imprintDropCount;
         }
         
@@ -2390,7 +2449,7 @@ const Game = {
         for (let i = 0; i < actual; i++) {
             const rank = Game.rollImprintRank(category);
             const cost = Utils.getImprintCostByRank(rank);
-            const effectKey = rank === 6 ? 'attackCountPlusOne' : IMPRINT_EFFECT_KEYS[Utils.rand(0, IMPRINT_EFFECT_KEYS.length - 1)];
+            const effectKey = rank === 6 ? IMPRINT_RANK6_EFFECT_KEYS[Utils.rand(0, IMPRINT_RANK6_EFFECT_KEYS.length - 1)] : IMPRINT_EFFECT_KEYS[Utils.rand(0, IMPRINT_EFFECT_KEYS.length - 1)];
             State.player.inventory.imprints.push({
                 id: Utils.generateId('imprint'),
                 category,
@@ -2398,7 +2457,7 @@ const Game = {
                 rankBonus: rank === 6 ? 0 : Game.rollImprintBonus(rank),
                 cost,
                 effectKey,
-                uniqueKey: rank === 6 ? 'rank6_attack_count_plus_1' : `normal_${effectKey}`
+                uniqueKey: rank === 6 ? `rank6_${effectKey}` : `normal_${effectKey}`
             });
         }
         State.player.inventory.sealedImprints[category] -= actual;
@@ -2457,10 +2516,13 @@ const Game = {
         };
         const imprintNameMap = {
             str: 'STRの刻印', vit: 'VITの刻印', dex: 'DEXの刻印', int: 'INTの刻印', luk: 'LUKの刻印',
-            maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印', attackCountPlusOne: '攻撃回数の刻印'
+            maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印',
+            normalHitCtReduce: '通常命中CT減の刻印', halfSkillCpCost: '消費CP半減の刻印', attackCountPlusTwo: '攻撃回数+2の刻印', halfDefensePierce: '防御半分無視の刻印',
+            poisonPercentDamage: '毒割合化の刻印', drainRateUp: '吸収率+50%の刻印', halfPotionCpCost: '回復CP半減の刻印', doubleCpGain: '獲得CP2倍の刻印',
+            doubleImprintDrop: '刻印獲得2倍の刻印', turnStartDefBlock: 'ターン開始防御ブロックの刻印', turnEndHalfAtkAoe: 'ターン終了追撃の刻印'
         };
         const slotLabelMap = { weapon: '武器', armor: '防具', accessory: '装飾品' };
-        const filterKeys = [...IMPRINT_EFFECT_KEYS, 'attackCountPlusOne'];
+        const filterKeys = [...IMPRINT_EFFECT_KEYS, ...IMPRINT_RANK6_EFFECT_KEYS];
         State.inventoryImprintEffectFilter ||= {};
         filterKeys.forEach(k => {
             if (typeof State.inventoryImprintEffectFilter[k] !== 'boolean') State.inventoryImprintEffectFilter[k] = true;
@@ -2478,6 +2540,20 @@ const Game = {
             const remain = (Math.ceil(v.effectiveLv) - v.effectiveLv).toFixed(1);
             return `${effectLabelMap[key] || key} Lv${v.effectiveLv.toFixed(1)} (最終${v.value} / 次まで${remain})`;
         }).join(' / ') || '有効な刻印効果なし';
+        const rank6LabelMap = {
+            normalHitCtReduce: '通常攻撃命中数ぶんCT減少',
+            halfSkillCpCost: 'スキル消費CP半減',
+            attackCountPlusTwo: '通常攻撃+2回',
+            halfDefensePierce: '敵防御半分無視',
+            poisonPercentDamage: '毒ダメージ割合化',
+            drainRateUp: '吸収率+50%',
+            halfPotionCpCost: '回復必要CP半減',
+            doubleCpGain: '獲得CP2倍',
+            doubleImprintDrop: '刻印獲得数2倍',
+            turnStartDefBlock: 'ターン開始時DEF分ブロック',
+            turnEndHalfAtkAoe: 'ターン終了時に敵全体へATK半分'
+        };
+        const rank6Summary = Object.keys(summary.rank6Effects || {}).map(key => rank6LabelMap[key] || key).join(' / ');
 
         const sumLines = {};
         ['weapon', 'armor', 'accessory'].forEach(slot => {
@@ -2493,7 +2569,8 @@ const Game = {
                 sumLines[key].push({ label: slotLabelMap[slot], value });
             });
         });
-        const detailRows = Object.entries(sumLines).map(([key, lines]) => {
+        const detailRows = [
+            ...Object.entries(sumLines).map(([key, lines]) => {
             const totalEffective = lines.reduce((acc, line) => acc + line.value, 0);
             const totalFinal = Math.floor(totalEffective);
             const remain = (Math.ceil(totalEffective) - totalEffective).toFixed(1);
@@ -2504,7 +2581,9 @@ const Game = {
                 <div class="text-[11px] text-gray-700 border-t mt-1 pt-1">────────</div>
                 <div class="text-[11px] font-bold text-blue-700">合計: EffectLv ${totalEffective.toFixed(1)} / 最終 ${totalFinal} / 次まで ${remain}</div>
             </div>`;
-        }).join('');
+        }),
+            ...Object.keys(summary.rank6Effects || {}).map(key => `<div class="border rounded p-2 bg-pink-50 border-pink-200"><div class="font-bold text-[11px] text-pink-700">Rank6特性</div><div class="text-[11px] text-pink-800 mt-1">${rank6LabelMap[key] || key}</div></div>`)
+        ].join('');
 
         const renderStack = (key) => {
             const c = IMPRINT_CATEGORY[key];
@@ -2547,7 +2626,7 @@ const Game = {
                 <div class="font-bold text-xs mb-1">合算結果（武器・防具・装飾品すべて）</div>
                 <div class="mb-2 flex gap-1 flex-wrap">${slotRows}</div>
                 <div class="text-[11px] text-blue-700 font-bold mb-2 flex items-center justify-between gap-2">
-                    <span class="flex-1">${totalSummary}</span>
+                    <span class="flex-1">${totalSummary}<br><span class='text-pink-700'>${rank6Summary || 'Rank6特性なし'}</span></span>
                     <button onclick="Game.showImprintSummaryDetail()" class="w-6 h-6 shrink-0 rounded-full border border-blue-300 bg-white text-blue-700"><i class="fa-solid fa-circle-info"></i></button>
                 </div>
             </div>
@@ -2612,9 +2691,12 @@ const Game = {
     showImprintEffectFilterModal: () => {
         const labelMap = {
             str: 'STRの刻印', vit: 'VITの刻印', dex: 'DEXの刻印', int: 'INTの刻印', luk: 'LUKの刻印',
-            maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印', attackCountPlusOne: '攻撃回数の刻印'
+            maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印',
+            normalHitCtReduce: '通常命中CT減の刻印', halfSkillCpCost: '消費CP半減の刻印', attackCountPlusTwo: '攻撃回数+2の刻印', halfDefensePierce: '防御半分無視の刻印',
+            poisonPercentDamage: '毒割合化の刻印', drainRateUp: '吸収率+50%の刻印', halfPotionCpCost: '回復CP半減の刻印', doubleCpGain: '獲得CP2倍の刻印',
+            doubleImprintDrop: '刻印獲得2倍の刻印', turnStartDefBlock: 'ターン開始防御ブロックの刻印', turnEndHalfAtkAoe: 'ターン終了追撃の刻印'
         };
-        const keys = [...IMPRINT_EFFECT_KEYS, 'attackCountPlusOne'];
+        const keys = [...IMPRINT_EFFECT_KEYS, ...IMPRINT_RANK6_EFFECT_KEYS];
         State.inventoryImprintEffectFilter ||= {};
         keys.forEach(k => {
             if (typeof State.inventoryImprintEffectFilter[k] !== 'boolean') State.inventoryImprintEffectFilter[k] = true;
@@ -2637,7 +2719,7 @@ const Game = {
     },
 
     setImprintEffectFilterAll: (value) => {
-        const keys = [...IMPRINT_EFFECT_KEYS, 'attackCountPlusOne'];
+        const keys = [...IMPRINT_EFFECT_KEYS, ...IMPRINT_RANK6_EFFECT_KEYS];
         State.inventoryImprintEffectFilter ||= {};
         keys.forEach(k => { State.inventoryImprintEffectFilter[k] = value; });
         Game.showImprintEffectFilterModal();

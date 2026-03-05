@@ -2560,6 +2560,11 @@ const Game = {
 
         const identifyBarHtml = `<div class="border-t bg-white p-2 shrink-0">
             <div class="grid grid-cols-3 gap-1">${renderStack('rough')}${renderStack('refined')}${renderStack('gleaming')}</div>
+            <div class="grid grid-cols-3 gap-1 mt-1">
+                <button onclick="Game.addSealedImprints('rough',10)" class="px-1 py-1 border rounded text-[10px] bg-yellow-50 text-yellow-700">デバッグ 荒削り+10</button>
+                <button onclick="Game.addSealedImprints('refined',10)" class="px-1 py-1 border rounded text-[10px] bg-yellow-50 text-yellow-700">デバッグ 精錬+10</button>
+                <button onclick="Game.addSealedImprints('gleaming',10)" class="px-1 py-1 border rounded text-[10px] bg-yellow-50 text-yellow-700">デバッグ 煌めく+10</button>
+            </div>
         </div>`;
 
         return { contentHtml: html, identifyBarHtml };

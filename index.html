@@ -1299,7 +1299,6 @@ const Game = {
     // --- Stage Select ---
     renderStageSelect: () => {
         State.inDungeon = false;
-        State.baseMerchantOptions = Game.generateBaseMerchantOptions();
         Game.updateHeader();
         
         let html = `
@@ -2348,6 +2347,7 @@ const Game = {
 
     gameOver: () => {
         State.inDungeon = false;
+        State.baseMerchantOptions = Game.generateBaseMerchantOptions();
         State.baseMerchantRefreshAvailable = true;
         Game.updateHeader();
         const stageName = STAGES[State.stage - 1]?.name || '';
@@ -2367,6 +2367,7 @@ const Game = {
             State.maxUnlockedStage++;
         }
         State.inDungeon = false;
+        State.baseMerchantOptions = Game.generateBaseMerchantOptions();
         State.baseMerchantRefreshAvailable = true;
         Game.updateHeader();
         const stageName = STAGES[State.stage - 1]?.name || `ステージ ${State.stage}`;

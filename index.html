@@ -2780,34 +2780,6 @@ const Game = {
         Game.equipImprint(slotName, imprint.id);
     },
 
-    sellImprintsBySignature: (signature) => {
-        Utils.ensureInventoryStructure();
-        const equippedIds = new Set(Utils.getEquippedImprints().map(im => im.id));
-        const sellIds = new Set();
-        let totalPrice = 0;
-        let soldCount = 0;
-
-        State.player.inventory.imprints.forEach(im => {
-            const sig = `${im.category}|${im.rank}|${im.cost}|${im.effectKey}|${im.rankBonus}|${im.uniqueKey}`;
-            if (sig !== signature || equippedIds.has(im.id)) return;
-            sellIds.add(im.id);
-            totalPrice += Math.max(1, im.rank * 4 + im.cost * 3);
-            soldCount += 1;
-        });
-
-        if (soldCount < 1) {
-            Game.showAlertModal({ title: '売却できません', message: '売却可能な刻印がありません。' });
-            return;
-        }
-
-        State.player.inventory.imprints = State.player.inventory.imprints.filter(im => !sellIds.has(im.id));
-        State.player.gold += totalPrice;
-        Game.showImprintLab(State.inventoryImprintFilterRank || 0);
-        Game.updateHeader();
-        Utils.log(`刻印を${soldCount}個売却し、${totalPrice}Gを獲得した。`);
-        Game.autosaveDebounced();
-    },
-
     removeImprint: (slotName, imprintId) => {
         const item = State.player.equip[slotName];
         if (!item || !item.imprintSlots) return;

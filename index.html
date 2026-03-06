@@ -780,7 +780,7 @@ const EnemyLogic = {
             const bossDef = BOSS_DEFINITIONS[State.stage];
             const fallback = ENEMY_TEMPLATES.find(e => e.type === 'boss') || { name: 'ドラゴン (BOSS)', hp: 150, str: 15, vit: 8, icon: 'fa-dragon' };
             const base = bossDef ? bossDef.base : { hp: fallback.hp, str: fallback.str, vit: fallback.vit };
-            const depthMult = 1 + (State.floor * 0.3) + ((State.stage - 1) * 1.2);
+            const depthMult = 1 + (State.floor * 0.33) + ((State.stage - 1) * 1.22);
             return [{
                 id: 'enemy_0',
                 bossId: bossDef ? bossDef.id : 'boss_fallback',
@@ -811,7 +811,7 @@ const EnemyLogic = {
         
         for (let i = 0; i < count; i++) {
             const tpl = pool[Utils.rand(0, pool.length - 1)];
-            const depthMult = 1 + (State.floor * 0.3) + ((State.stage - 1) * 1.2);
+            const depthMult = 1 + (State.floor * 0.38) + ((State.stage - 1) * 1.24);
             enemies.push({
                 id: 'enemy_' + i,
                 name: `${tpl.name}${count > 1 ? String.fromCharCode(65 + i) : ''}`,

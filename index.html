@@ -2840,11 +2840,11 @@ const Game = {
         Utils.ensureInventoryStructure();
         const sealed = State.player.inventory.sealedImprints;
         const effectLabelMap = {
-            str: 'STR', vit: 'VIT', dex: 'DEX', int: 'INT', luk: 'LUK',
-            maxHp: 'MaxHP', maxCp: 'MaxCP', atkPercent: 'ATK%', defPercent: 'DEF%'
+            str: '筋力', vit: '体力', dex: '器用', int: '知力', luk: '運',
+            maxHp: '最大HP', maxCp: '最大CP', atkPercent: '攻撃力%', defPercent: '防御力%'
         };
         const imprintNameMap = {
-            str: 'STRの刻印', vit: 'VITの刻印', dex: 'DEXの刻印', int: 'INTの刻印', luk: 'LUKの刻印',
+            str: '筋力の刻印', vit: '体力の刻印', dex: '器用の刻印', int: '知力の刻印', luk: '運の刻印',
             maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印',
             normalHitCtReduce: '通常命中CT減の刻印', halfSkillCpCost: '消費CP半減の刻印', attackCountPlusTwo: '攻撃回数+2の刻印', halfDefensePierce: '防御半分無視の刻印',
             poisonPercentDamage: '毒割合化の刻印', drainRateUp: '吸収率+50%の刻印', halfPotionCpCost: '回復CP半減の刻印', doubleCpGain: '獲得CP2倍の刻印',
@@ -2867,7 +2867,7 @@ const Game = {
         const summary = Utils.getImprintEffectsSummary();
         const totalSummary = Object.entries(summary.grouped).map(([key, v]) => {
             const remain = (Math.ceil(v.effectiveLv) - v.effectiveLv).toFixed(1);
-            return `${effectLabelMap[key] || key} Lv${v.effectiveLv.toFixed(1)} (最終${v.value} / 次まで${remain})`;
+            return `${effectLabelMap[key] || key} レベル${v.effectiveLv.toFixed(1)} (最終${v.value} / 次まで${remain})`;
         }).join(' / ') || '有効な刻印効果なし';
         const rank6LabelMap = {
             normalHitCtReduce: '通常攻撃命中数ぶんCT減少',
@@ -2908,7 +2908,7 @@ const Game = {
                 <div class="font-bold text-[11px] mb-1">${effectLabelMap[key] || key}</div>
                 <div class="text-[11px] text-gray-700 space-y-0.5">${detail}</div>
                 <div class="text-[11px] text-gray-700 border-t mt-1 pt-1">────────</div>
-                <div class="text-[11px] font-bold text-blue-700">合計: EffectLv ${totalEffective.toFixed(1)} / 最終 ${totalFinal} / 次まで ${remain}</div>
+                <div class="text-[11px] font-bold text-blue-700">合計: 効果Lv ${totalEffective.toFixed(1)} / 最終 ${totalFinal} / 次まで ${remain}</div>
             </div>`;
         }),
             ...Object.keys(summary.rank6Effects || {}).map(key => `<div class="border rounded p-2 bg-pink-50 border-pink-200"><div class="font-bold text-[11px] text-pink-700">Rank6特性</div><div class="text-[11px] text-pink-800 mt-1">${rank6LabelMap[key] || key}</div></div>`)
@@ -2977,12 +2977,12 @@ const Game = {
                 const cls = Utils.getImprintRankColor(im.rank);
                 const bonusText = im.rank === 6 ? '-' : im.rankBonus.toFixed(1);
                 const unitPrice = Math.max(1, im.rank * 4 + im.cost * 3);
-                const unitValue = im.rank === 6 ? 'special' : ((im.rank + im.rankBonus) * (IMPRINT_COST_WEIGHT[im.cost] || 1)).toFixed(1);
+                const unitValue = im.rank === 6 ? '特殊' : ((im.rank + im.rankBonus) * (IMPRINT_COST_WEIGHT[im.cost] || 1)).toFixed(1);
                 html += `<div class="p-2 border rounded text-xs ${cls}">
                     <div class="flex justify-between items-start gap-2">
                         <div>
-                            <div class="font-bold">${imprintNameMap[im.effectKey] || `${im.effectKey}の刻印`} Rank${im.rank} / cost${im.cost} ×${im.count}</div>
-                            <div>effect:${im.effectKey} / bonus:${bonusText} / value:${unitValue}</div>
+                            <div class="font-bold">${imprintNameMap[im.effectKey] || `${im.effectKey}の刻印`} ランク${im.rank} / コスト${im.cost} ×${im.count}</div>
+                            <div>効果:${effectLabelMap[im.effectKey] || im.effectKey} / 補正:${bonusText} / 評価値:${unitValue}</div>
                             <div class="text-[10px] text-gray-600">売却可能 ${im.freeCount} 個（装着中 ${im.count - im.freeCount} 個）</div>
                         </div>
                         <div class="flex flex-col items-end gap-1">
@@ -3019,7 +3019,7 @@ const Game = {
 
     showImprintEffectFilterModal: () => {
         const labelMap = {
-            str: 'STRの刻印', vit: 'VITの刻印', dex: 'DEXの刻印', int: 'INTの刻印', luk: 'LUKの刻印',
+            str: '筋力の刻印', vit: '体力の刻印', dex: '器用の刻印', int: '知力の刻印', luk: '運の刻印',
             maxHp: '最大HPの刻印', maxCp: '最大CPの刻印', atkPercent: '攻撃力の刻印', defPercent: '防御力の刻印',
             normalHitCtReduce: '通常命中CT減の刻印', halfSkillCpCost: '消費CP半減の刻印', attackCountPlusTwo: '攻撃回数+2の刻印', halfDefensePierce: '防御半分無視の刻印',
             poisonPercentDamage: '毒割合化の刻印', drainRateUp: '吸収率+50%の刻印', halfPotionCpCost: '回復CP半減の刻印', doubleCpGain: '獲得CP2倍の刻印',
